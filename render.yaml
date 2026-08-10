@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: forma-fitness-coach
+    runtime: python
+    buildCommand: pip install uv==0.12.2 && uv sync --frozen --no-dev
+    startCommand: uv run --frozen --no-dev python -m app.bot
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: APP_ENV
+        value: production
+      - key: APP_STORAGE_SECRET
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: AI_JUDGE_MODEL
+        value: gemini-3.5-flash-lite

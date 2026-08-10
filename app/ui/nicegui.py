@@ -1,0 +1,282 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import date, datetime
+from typing import Any
+from uuid import uuid4
+
+from nicegui import app, ui
+
+from app.agent.memory import ConversationMemory
+from app.agent.chat_policy import (
+    build_complete_profile,
+    format_profile_data,
+    public_profile_context,
+    should_use_bounded_agent,
+    target_facts,
+)
+from app.agent.orchestrator import FitnessAgent
+from app.agent.profile_facts import extract_profile_facts
+from app.agent.router import route_intent
+from app.config import Settings
+from app.guards.safety import urgent_message_if_needed
+from app.knowledge.rag import FitnessKnowledgeRetriever
+from app.providers.factory import create_provider_bundle
+from app.repositories.local_memory import LocalProfileStore
+from app.repositories.supabase import SupabaseError, SupabaseGateway
+from app.tools.calorie_macros import calculate_nutrition_targets
+
+
+def configure_pages(settings: Settings) -> None:
+    provider = create_provider_bundle(settings)
+    bounded_agent = FitnessAgent(provider.generator, provider.judge, FitnessKnowledgeRetriever())
+    gateway = (
+        SupabaseGateway(settings.supabase_url, settings.supabase_publishable_key)
+        if settings.supabase_enabled
+        else None
+    )
+    local_profiles = LocalProfileStore()
+
+    @ui.page("/")
+    async def index() -> None:
+        ui.add_head_html(
+            """
+            <style>
+              :root { color-scheme: dark; }
+              body, .q-page { background: #0b0d10; color: #f8fafc; }
+              .chat-shell { height: 100vh; max-width: 920px; margin: 0 auto; }
+              .topbar { background: rgba(11,13,16,.94); border-bottom: 1px solid #282e37; }
+              .brand-mark { background: #f4f4f5; color: #111318; border-radius: 9px; padding: 5px 8px; font-weight: 800; }
+              .composer { background: #171c23; border: 1px solid #353d48; border-radius: 18px; }
+              .composer .q-field__control, .composer textarea { background: transparent !important; color: #fff !important; }
+              .composer textarea::placeholder { color: #9ca7b5 !important; opacity: 1; }
+              .assistant-bubble, .user-bubble { display: inline-block; height: auto !important; min-height: 0 !important; background: #20262e; color: #fff; border: 1px solid #353d48; border-radius: 16px; padding: 12px 15px; max-width: min(760px, 90%); animation: message-in .22s ease-out; }
+              .user-bubble { background: #2a303a; }
+              .assistant-bubble .q-markdown, .user-bubble .q-markdown { margin: 0 !important; padding: 0 !important; min-height: 0 !important; }
+              .assistant-bubble p, .user-bubble p, .assistant-bubble .q-markdown p, .user-bubble .q-markdown p { color: #fff !important; margin: 0 !important; padding: 0 !important; }
+              .typing { color: #b8c2d0; font-size: .9rem; animation: pulse 1.1s ease-in-out infinite; }
+              .prompt-chip { background: rgba(116, 126, 141, .24) !important; border: 1px solid rgba(180, 191, 207, .25); border-radius: 13px; color: #eef2f7 !important; }
+              .prompt-chip .q-btn__content { color: #eef2f7 !important; }
+              .send-button { width: 44px; height: 44px; min-width: 44px; padding: 0 !important; background: #f4f4f5 !important; color: #111318 !important; border: 1px solid #fff; }
+              .send-button .q-btn__content, .send-button .q-icon { color: #111318 !important; }
+              .new-chat-button, .new-chat-button .q-btn__content, .new-chat-button .q-icon { color: #f4f4f5 !important; }
+              .desktop-actions { display: flex !important; }
+              .mobile-actions { display: none !important; }
+              .action-menu { min-width: 220px; padding: 6px; background: #20262e !important; color: #f4f4f5 !important; border: 1px solid #3a424e; border-radius: 12px; box-shadow: 0 14px 38px rgba(0,0,0,.45); }
+              .action-menu .q-item { min-height: 42px; color: #f4f4f5 !important; border-radius: 8px; }
+              .action-menu .q-item:hover { background: rgba(255,255,255,.08) !important; }
+              .action-menu .danger-action { color: #ff9c9c !important; }
+              @media (max-width: 767px) {
+                .desktop-actions { display: none !important; }
+                .mobile-actions { display: flex !important; }
+              }
+              @keyframes message-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+              @keyframes pulse { 50% { opacity: .42; } }
+            </style>
+            """
+        )
+        state: dict[str, Any] = {"memory": ConversationMemory(), "profile": None, "token": None, "user_id": None}
+
+        def activate_local_fallback(seed: dict[str, Any] | None = None) -> None:
+            user_id = app.storage.user.get("local_profile_id") or str(uuid4())
+            app.storage.user["local_profile_id"] = user_id
+            state["token"], state["user_id"] = None, user_id
+            state["profile"] = (
+                local_profiles.save(user_id, public_profile_context(seed))
+                if seed
+                else local_profiles.get(user_id)
+            )
+
+        if gateway:
+            try:
+                token = app.storage.user.get("anonymous_access_token")
+                user_id = app.storage.user.get("anonymous_user_id")
+                if not token or not user_id:
+                    session = await gateway.sign_in_anonymously()
+                    token, user_id = session.access_token, session.user_id
+                    app.storage.user.update(
+                        anonymous_access_token=token,
+                        anonymous_refresh_token=session.refresh_token,
+                        anonymous_user_id=user_id,
+                    )
+                try:
+                    state["profile"] = await gateway.get_anonymous_profile(token, user_id)
+                except SupabaseError:
+                    session = await gateway.refresh_session(app.storage.user.get("anonymous_refresh_token", ""))
+                    token, user_id = session.access_token, session.user_id
+                    app.storage.user.update(
+                        anonymous_access_token=token,
+                        anonymous_refresh_token=session.refresh_token,
+                        anonymous_user_id=user_id,
+                    )
+                    state["profile"] = await gateway.get_anonymous_profile(token, user_id)
+                state["token"], state["user_id"] = token, user_id
+            except SupabaseError:
+                activate_local_fallback()
+        else:
+            user_id = app.storage.user.get("local_profile_id")
+            if not user_id:
+                user_id = str(uuid4())
+                app.storage.user["local_profile_id"] = user_id
+            state["user_id"] = user_id
+            state["profile"] = local_profiles.get(user_id)
+
+        with ui.column().classes("chat-shell w-full no-wrap"):
+            with ui.row().classes("topbar w-full items-center justify-between px-4 py-3"):
+                with ui.row().classes("items-center gap-3"):
+                    ui.label("F").classes("brand-mark")
+                    with ui.column().classes("gap-0"):
+                        ui.label("Forma").classes("text-base font-bold text-white")
+                        ui.label("Фитнес-тренер и нутрициолог").classes("text-xs text-gray-400")
+
+            chat_scroll = ui.scroll_area().classes("w-full grow px-3 md:px-6")
+            with chat_scroll:
+                chat = ui.column().classes("w-full gap-4 py-8")
+
+            with ui.column().classes("w-full px-3 md:px-6 pb-5"):
+                quick_actions = (
+                    "Рассчитать калории",
+                    "Составить тренировку",
+                    "Подобрать меню",
+                    "Покажи мои данные",
+                    "Удалить мои данные",
+                )
+                with ui.row().classes("desktop-actions w-full justify-center gap-2 pb-3 flex-wrap"):
+                    quick_buttons = [
+                        ui.button(text, on_click=lambda value=text: ask(value))
+                        .props("flat dense no-caps")
+                        .classes("prompt-chip text-xs")
+                        .style("background: rgba(116, 126, 141, .24) !important; color: #eef2f7 !important;")
+                        for text in quick_actions
+                    ]
+                with ui.row().classes("mobile-actions w-full justify-center pb-3"):
+                    with ui.button("Действия", icon="more_horiz").props("flat dense no-caps").classes("prompt-chip"):
+                        with ui.menu().classes("action-menu"):
+                            for text in quick_actions:
+                                item = ui.menu_item(text, on_click=lambda value=text: ask(value))
+                                if text == "Удалить мои данные":
+                                    item.classes("danger-action")
+                with ui.row().classes("composer w-full items-center px-3 py-1 gap-2"):
+                    question = ui.textarea(placeholder="Напишите сообщение…").props("autogrow borderless").classes("grow")
+                    ui.button(icon="send", on_click=lambda: ask()).props("round unelevated") \
+                        .classes("send-button") \
+                        .style("background: #f4f4f5 !important; color: #111318 !important;")
+
+        async def scroll_to_latest() -> None:
+            """Wait for NiceGUI to render the new message before scrolling the chat container."""
+            await asyncio.sleep(0.08)
+            chat_scroll.scroll_to(percent=1, duration=0.2)
+            await asyncio.sleep(0.25)
+            chat_scroll.scroll_to(percent=1)
+
+        def add_bubble(text: str, sent: bool = False) -> None:
+            with chat:
+                with ui.row().classes(f"w-full {'justify-end' if sent else 'justify-start'}"):
+                    ui.markdown(text).classes("user-bubble" if sent else "assistant-bubble")
+            asyncio.create_task(scroll_to_latest())
+
+        def add_typing() -> Any:
+            with chat:
+                typing = ui.row().classes("w-full justify-start items-center gap-2")
+                with typing:
+                    ui.spinner("dots", size="20px", color="lime-5")
+                    ui.label("Forma печатает…").classes("typing")
+            asyncio.create_task(scroll_to_latest())
+            return typing
+
+        async def ask(text: str | None = None) -> None:
+            message = (text if text is not None else question.value).strip()
+            if not message:
+                return
+            question.value = ""
+            add_bubble(message, sent=True)
+            typing = add_typing()
+            try:
+                normalized = message.casefold().strip()
+                if normalized in {"удали мои данные", "удалить мои данные"} and gateway and state["token"]:
+                    await gateway.request_anonymous_deletion(state["token"], state["user_id"])
+                    for key in ("anonymous_access_token", "anonymous_refresh_token", "anonymous_user_id"):
+                        app.storage.user.pop(key, None)
+                    state["token"], state["user_id"] = None, None
+                    try:
+                        session = await gateway.sign_in_anonymously()
+                        app.storage.user.update(
+                            anonymous_access_token=session.access_token,
+                            anonymous_refresh_token=session.refresh_token,
+                            anonymous_user_id=session.user_id,
+                        )
+                        state["token"], state["user_id"] = session.access_token, session.user_id
+                    except SupabaseError:
+                        activate_local_fallback()
+                    state["profile"] = None
+                    state["memory"] = ConversationMemory()
+                    typing.delete()
+                    add_bubble("Ваши данные очищены и поставлены на окончательное удаление. Можно начать заново: просто расскажите о себе.")
+                    return
+                if normalized in {"удали мои данные", "удалить мои данные"}:
+                    local_profiles.delete(state["user_id"])
+                    state["profile"] = None
+                    state["memory"] = ConversationMemory()
+                    typing.delete()
+                    add_bubble("Локальный профиль удалён. При желании можно начать заново: просто расскажите о себе.")
+                    return
+                if normalized in {"покажи мои данные", "показать мои данные"}:
+                    typing.delete()
+                    add_bubble(format_profile_data(state["profile"]))
+                    return
+                facts = extract_profile_facts(message)
+                if gateway and state["token"]:
+                    try:
+                        if facts:
+                            state["profile"] = await gateway.save_anonymous_facts(
+                                state["token"], state["user_id"], facts
+                            )
+                        elif state["profile"]:
+                            state["profile"] = await gateway.touch_anonymous_profile(
+                                state["token"], state["user_id"]
+                            )
+                    except SupabaseError:
+                        activate_local_fallback({**(state["profile"] or {}), **facts})
+                elif facts:
+                    state["profile"] = local_profiles.save(state["user_id"], facts)
+                elif state["profile"]:
+                    state["profile"] = local_profiles.touch(state["user_id"])
+                profile_context = {
+                    key: value.isoformat() if isinstance(value, (date, datetime)) else value
+                    for key, value in public_profile_context(state["profile"]).items()
+                }
+                urgent_reply = urgent_message_if_needed(message)
+                complete_profile = build_complete_profile(profile_context)
+                if complete_profile:
+                    targets = calculate_nutrition_targets(complete_profile)
+                    updates = target_facts(targets)
+                    if any(profile_context.get(key) != value for key, value in updates.items()):
+                        if gateway and state["token"]:
+                            state["profile"] = await gateway.save_anonymous_facts(
+                                state["token"], state["user_id"], updates
+                            )
+                        else:
+                            state["profile"] = local_profiles.save(state["user_id"], updates)
+                        profile_context.update(updates)
+                intent = route_intent(message)
+                if urgent_reply:
+                    reply = urgent_reply
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
+                elif should_use_bounded_agent(intent, complete_profile):
+                    reply = (await bounded_agent.respond(complete_profile, message, state["memory"])).message
+                else:
+                    reply = await provider.conversation.respond(
+                        message, state["memory"].recent(), profile_context
+                    )
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
+                typing.delete()
+                add_bubble(reply)
+            except Exception:
+                logging.exception("Chat request failed")
+                typing.delete()
+                add_bubble("Не удалось подготовить ответ. Попробуйте ещё раз чуть позже.")
+
+        question.on("keydown.enter", lambda _: ask())
