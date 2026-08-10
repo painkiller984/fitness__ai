@@ -32,3 +32,19 @@ def test_extractor_accepts_short_name_with_other_profile_facts() -> None:
 
 def test_extractor_does_not_store_arbitrary_i_am_phrase_as_name() -> None:
     assert "name" not in extract_profile_facts("я новичок")
+
+
+def test_extracts_english_profile_facts() -> None:
+    facts = extract_profile_facts(
+        "My name is Alex, I am a 30 years old man, height 178 cm, I weigh 93 kg, "
+        "I want to lose weight and train 3 times a week."
+    )
+    assert facts == {
+        "name": "Alex",
+        "age": 30,
+        "height_cm": 178,
+        "weight_kg": 93.0,
+        "sex": "male",
+        "goal": "weight_loss",
+        "activity_level": "moderate",
+    }

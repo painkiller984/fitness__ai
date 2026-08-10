@@ -55,10 +55,12 @@ def public_profile_context(profile: dict[str, Any] | None) -> dict[str, Any]:
     return {key: value for key, value in (profile or {}).items() if key not in hidden}
 
 
-def format_profile_data(profile: dict[str, Any] | None) -> str:
+def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") -> str:
     if not profile:
+        if language == "en":
+            return "I don’t have any saved data yet. Tell me your name, age, sex, height, weight, goal, and activity level."
         return "Пока у меня нет сохранённых данных о вас. Расскажите имя, возраст, пол, рост, вес, цель и активность."
-    labels = {
+    labels_ru = {
         "name": "имя",
         "age": "возраст",
         "sex": "пол",
@@ -71,6 +73,19 @@ def format_profile_data(profile: dict[str, Any] | None) -> str:
         "fat_g": "жиры",
         "carbs_g": "углеводы",
     }
+    labels_en = {
+        "name": "name",
+        "age": "age",
+        "sex": "sex",
+        "height_cm": "height",
+        "weight_kg": "weight",
+        "goal": "goal",
+        "activity_level": "activity",
+        "target_kcal": "calories",
+        "protein_g": "protein",
+        "fat_g": "fat",
+        "carbs_g": "carbohydrates",
+    }
     suffixes = {
         "age": " лет",
         "height_cm": " см",
@@ -80,7 +95,7 @@ def format_profile_data(profile: dict[str, Any] | None) -> str:
         "fat_g": " г",
         "carbs_g": " г",
     }
-    translations = {
+    translations_ru = {
         "male": "мужской",
         "female": "женский",
         "weight_loss": "снижение веса",
@@ -93,9 +108,25 @@ def format_profile_data(profile: dict[str, Any] | None) -> str:
         "high": "высокая",
         "very_high": "очень высокая",
     }
+    translations_en = {
+        "male": "male",
+        "female": "female",
+        "weight_loss": "weight loss",
+        "muscle_gain": "muscle gain",
+        "maintenance": "maintenance",
+        "wellbeing": "improved wellbeing",
+        "sedentary": "sedentary",
+        "light": "light",
+        "moderate": "moderate",
+        "high": "high",
+        "very_high": "very high",
+    }
+    labels = labels_en if language == "en" else labels_ru
+    translations = translations_en if language == "en" else translations_ru
     values = [
         f"{labels[key]} — {translations.get(str(profile[key]), profile[key])}{suffixes.get(key, '')}"
         for key in labels
         if profile.get(key) not in (None, "", [])
     ]
-    return "Сохранённые данные: " + ", ".join(values) + "."
+    prefix = "Saved data: " if language == "en" else "Сохранённые данные: "
+    return prefix + ", ".join(values) + "."

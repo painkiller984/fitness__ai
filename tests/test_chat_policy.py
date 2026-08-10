@@ -58,3 +58,11 @@ def test_internal_profile_values_are_displayed_in_russian() -> None:
     assert "активность — умеренная" in text
     assert "male" not in text
     assert "weight_loss" not in text
+
+
+def test_profile_can_be_displayed_fully_in_english() -> None:
+    text = format_profile_data(COMPLETE, "en")
+    assert "Saved data" in text
+    assert "sex — male" in text
+    assert "goal — weight loss" in text
+    assert "Сохранённые" not in text

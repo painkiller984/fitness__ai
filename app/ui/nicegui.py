@@ -9,6 +9,7 @@ from uuid import uuid4
 from nicegui import app, ui
 
 from app.agent.memory import ConversationMemory
+from app.agent.language import response_language
 from app.agent.chat_policy import (
     build_complete_profile,
     format_profile_data,
@@ -194,7 +195,10 @@ def configure_pages(settings: Settings) -> None:
             typing = add_typing()
             try:
                 normalized = message.casefold().strip()
-                if normalized in {"удали мои данные", "удалить мои данные"} and gateway and state["token"]:
+                language = response_language(message)
+                delete_commands = {"удали мои данные", "удалить мои данные", "delete my data"}
+                show_commands = {"покажи мои данные", "показать мои данные", "show my data"}
+                if normalized in delete_commands and gateway and state["token"]:
                     await gateway.request_anonymous_deletion(state["token"], state["user_id"])
                     for key in ("anonymous_access_token", "anonymous_refresh_token", "anonymous_user_id"):
                         app.storage.user.pop(key, None)
@@ -212,18 +216,26 @@ def configure_pages(settings: Settings) -> None:
                     state["profile"] = None
                     state["memory"] = ConversationMemory()
                     typing.delete()
-                    add_bubble("Ваши данные очищены и поставлены на окончательное удаление. Можно начать заново: просто расскажите о себе.")
+                    add_bubble(
+                        "Your data has been cleared and queued for permanent deletion. You can start again by telling me about yourself."
+                        if language == "en"
+                        else "Ваши данные очищены и поставлены на окончательное удаление. Можно начать заново: просто расскажите о себе."
+                    )
                     return
-                if normalized in {"удали мои данные", "удалить мои данные"}:
+                if normalized in delete_commands:
                     local_profiles.delete(state["user_id"])
                     state["profile"] = None
                     state["memory"] = ConversationMemory()
                     typing.delete()
-                    add_bubble("Локальный профиль удалён. При желании можно начать заново: просто расскажите о себе.")
+                    add_bubble(
+                        "Your local profile has been deleted. You can start again by telling me about yourself."
+                        if language == "en"
+                        else "Локальный профиль удалён. При желании можно начать заново: просто расскажите о себе."
+                    )
                     return
-                if normalized in {"покажи мои данные", "показать мои данные"}:
+                if normalized in show_commands:
                     typing.delete()
-                    add_bubble(format_profile_data(state["profile"]))
+                    add_bubble(format_profile_data(state["profile"], language))
                     return
                 facts = extract_profile_facts(message)
                 if gateway and state["token"]:
@@ -277,6 +289,10 @@ def configure_pages(settings: Settings) -> None:
             except Exception:
                 logging.exception("Chat request failed")
                 typing.delete()
-                add_bubble("Не удалось подготовить ответ. Попробуйте ещё раз чуть позже.")
+                add_bubble(
+                    "I couldn’t prepare a response. Please try again in a moment."
+                    if response_language(message) == "en"
+                    else "Не удалось подготовить ответ. Попробуйте ещё раз чуть позже."
+                )
 
         question.on("keydown.enter", lambda _: ask())

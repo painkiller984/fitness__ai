@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.agent.state import NutritionTargets, UserProfile
+from app.agent.language import response_language
 
 
 class DeterministicGenerator:
@@ -15,6 +16,13 @@ class DeterministicGenerator:
         history: list[dict[str, str]],
         feedback: list[str] | None = None,
     ) -> str:
+        if response_language(message) == "en":
+            return (
+                f"{profile.name}, your estimated daily target is {targets.target_kcal} kcal: "
+                f"protein {targets.protein_g} g, fat {targets.fat_g} g, carbohydrates {targets.carbs_g} g. "
+                "Use this as a starting point and review your progress and wellbeing over 2–3 weeks. "
+                "This is general guidance, not medical advice."
+            )
         greeting_words = ("привет", "здравств", "добрый", "hello")
         if any(word in message.casefold() for word in greeting_words):
             return "Здравствуйте! Чем помочь: питанием, тренировками, меню или отслеживанием прогресса?"

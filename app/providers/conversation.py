@@ -6,6 +6,7 @@ from typing import Protocol
 
 from app.providers.openai_compatible import OpenAICompatibleClient
 from app.providers.prompts import CHAT_SYSTEM_PROMPT
+from app.agent.language import response_language
 
 
 class ConversationResponder(Protocol):
@@ -53,6 +54,11 @@ class OpenAICompatibleConversationResponder:
 
 class DeterministicConversationResponder:
     async def respond(self, message: str, history: list[dict[str, str]], profile: dict | None = None) -> str:
+        if response_language(message) == "en":
+            return (
+                "Hello! I’m Forma, your fitness and nutrition assistant. "
+                "Add a Gemini key to AI_API_KEY for free-form personalized responses."
+            )
         return (
             "Здравствуйте! Я Forma — помощник по тренировкам, питанию и расчёту калорий. "
             "Чтобы ответы были свободными и персональными, добавьте ключ Gemini в AI_API_KEY."
