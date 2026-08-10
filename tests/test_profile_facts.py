@@ -120,3 +120,8 @@ def test_unknown_or_full_gym_equipment_counts_as_answer() -> None:
     assert unknown["health_screened"] is True
     assert full_access["available_equipment"]
     assert full_access["equipment_screened"] is True
+
+
+def test_extracts_experience_duration_without_confusing_age() -> None:
+    assert extract_profile_facts("Мне 30 лет, тренируюсь 2 года")["training_experience"] == "advanced"
+    assert extract_profile_facts("Тренируюсь 6 месяцев")["training_experience"] == "intermediate"

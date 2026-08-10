@@ -62,7 +62,22 @@ def test_workout_onboarding_collects_training_specific_facts() -> None:
     assert stage.missing_fields == (
         "training_place",
         "training_experience",
-        "training_days_per_week",
-        "equipment_screened",
         "health_screened",
     )
+
+
+def test_workout_onboarding_does_not_require_activity_level() -> None:
+    stage = current_onboarding_stage(
+        {
+            "name": "Антон",
+            "age": 27,
+            "sex": "male",
+            "height_cm": 172,
+            "weight_kg": 94,
+            "goal": "weight_loss",
+        },
+        "workout",
+    )
+
+    assert stage is not None
+    assert stage.key == "workout_setup"

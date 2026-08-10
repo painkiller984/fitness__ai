@@ -60,26 +60,44 @@ def current_onboarding_stage(
     data = profile or {}
     stages = list(STAGES)
     if workflow == "workout":
+        stages = [
+            STAGES[0],
+            STAGES[1],
+            OnboardingStage(
+                key="goal",
+                missing_fields=("goal",),
+                instruction_ru=(
+                    "Коротко отреагируй и спроси только цель: похудение, набор мышечной массы, "
+                    "поддержание формы или самочувствие. Не спрашивай общий уровень активности: "
+                    "он не нужен для выбора готового шаблона тренировки."
+                ),
+                instruction_en=(
+                    "Respond briefly and ask only for the goal: weight loss, muscle gain, maintenance, "
+                    "or wellbeing. Do not ask for usual activity level; it is not needed to choose a "
+                    "ready-made workout template."
+                ),
+            ),
+        ]
         stages.append(
             OnboardingStage(
                 key="workout_setup",
                 missing_fields=(
                     "training_place",
                     "training_experience",
-                    "training_days_per_week",
-                    "equipment_screened",
                     "health_screened",
                 ),
                 instruction_ru=(
-                    "Коротко отреагируй, но не составляй программу. Спроси только недостающие данные для "
-                    "безопасной тренировки: где заниматься (дом, зал, улица), уровень (новичок, средний, "
-                    "продвинутый), сколько дней в неделю, доступное оборудование и есть ли травмы, "
-                    "заболевания или другие ограничения. Не выдумывай эти данные."
+                    "Коротко отреагируй, но не составляй программу. Спроси только недостающие данные: "
+                    "где заниматься (дом, зал, улица), тренировочный стаж (до месяца, от месяца до года "
+                    "или больше года) и есть ли травмы, заболевания или другие ограничения. Не спрашивай "
+                    "про общий уровень активности, дни тренировок или оборудование: готовые шаблоны уже "
+                    "рассчитаны на три занятия в неделю. Не выдумывай данные."
                 ),
                 instruction_en=(
                     "Respond briefly but do not create a program yet. Ask only for the missing workout details: "
-                    "place, experience level (beginner, intermediate, advanced), days per week, available "
-                    "equipment, and injuries, health conditions, or other limitations. Do not invent them."
+                    "place, training experience (under one month, one month to one year, or over one year), "
+                    "and injuries, health conditions, or other limitations. Do not ask about activity level, "
+                    "training days, or equipment: the ready-made templates already use three sessions per week."
                 ),
             )
         )

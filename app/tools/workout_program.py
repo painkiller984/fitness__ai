@@ -3,135 +3,103 @@ from __future__ import annotations
 from typing import Any
 
 
-LEVELS = {
-    "beginner": {"sets": "2–3", "reps": "8–12", "rir": "3–4", "max_days": 3},
-    "intermediate": {"sets": "3", "reps": "6–12", "rir": "2–3", "max_days": 4},
-    "advanced": {"sets": "3–4", "reps": "5–15", "rir": "1–3", "max_days": 5},
+WORKOUT_TEMPLATES_RU = {
+    "beginner": """Готовый шаблон: «Новичок — первые 4 недели»
+
+Формат: full body, 3 раза в неделю, например пн / ср / пт. Шаблон рассчитан на тренировки в зале.
+
+Тренировка A
+1. Жим ногами или присед в тренажёре — 2 × 8–12.
+2. Жим лёжа в тренажёре или с гантелями — 2 × 8–12.
+3. Тяга горизонтального блока — 2 × 8–12.
+4. Румынская тяга с гантелями — 2 × 8–12.
+5. Планка — 2 × 20–40 секунд.
+
+Тренировка B
+1. Гоблет-присед или жим ногами — 2 × 8–12.
+2. Тяга верхнего блока — 2 × 8–12.
+3. Жим гантелей на наклонной скамье — 2 × 8–12.
+4. Гиперэкстензия или ягодичный мост — 2 × 10–15.
+5. Dead bug — 2 × 8–12 на сторону.
+
+Чередуй A / B / A в первую неделю, затем B / A / B. Оставляй 3–4 повтора в запасе, отдыхай 1–2 минуты. Когда во всех подходах достигаешь верхней границы повторений с чистой техникой — добавь 1 повтор или минимальный вес.""",
+    "intermediate": """Готовый шаблон: «Опытный — стаж от месяца до года»
+
+Формат: сплит 3 раза в неделю, например пн / ср / пт. Шаблон рассчитан на тренировки в зале.
+
+День 1 — грудь и бицепс
+1. Жим лёжа — 3 × 6–10.
+2. Жим гантелей на наклонной скамье — 3 × 8–12.
+3. Сведения в тренажёре — 2 × 12–15.
+4. Сгибание рук со штангой или EZ-грифом — 3 × 8–12.
+5. Молотки с гантелями — 2 × 10–15.
+
+День 2 — спина и трицепс
+1. Тяга верхнего блока — 3 × 8–12.
+2. Тяга горизонтального блока — 3 × 8–12.
+3. Тяга гантели в наклоне — 2 × 10–12.
+4. Разгибание рук на блоке — 3 × 8–12.
+5. Французский жим с гантелью или канатом — 2 × 10–15.
+
+День 3 — плечи и ноги
+1. Присед или жим ногами — 3 × 6–10.
+2. Румынская тяга — 3 × 8–12.
+3. Жим гантелей сидя — 3 × 8–12.
+4. Подъёмы гантелей в стороны — 2 × 12–15.
+5. Подъёмы на икры — 3 × 10–15.
+
+Оставляй 2–3 повтора в запасе. Отдых: 2–3 минуты в базовых упражнениях, 1–2 минуты в изоляции. Когда достигаешь верхней границы повторений во всех подходах — добавь 1 повтор или 2–5% веса.""",
+    "advanced": """Готовый шаблон: «Продвинутый — стаж больше года»
+
+Формат: сплит 3 раза в неделю, например пн / ср / пт. Это тот же базовый сплит, но с запланированной прогрессией. Шаблон рассчитан на тренировки в зале.
+
+День 1 — грудь и бицепс
+1. Жим лёжа — 1 тяжёлый подход 6–8, затем 2 × 8–10.
+2. Жим гантелей на наклонной скамье — 3 × 8–12.
+3. Сведения в тренажёре — 3 × 12–15.
+4. Сгибание рук со штангой или EZ-грифом — 3 × 6–10.
+5. Молотки с гантелями — 2 × 10–15.
+
+День 2 — спина и трицепс
+1. Тяга верхнего блока или подтягивания — 3 × 6–10.
+2. Тяга штанги или T-грифа — 3 × 6–10.
+3. Тяга горизонтального блока — 2 × 10–12.
+4. Жим узким хватом или отжимания на брусьях с контролем — 3 × 6–10.
+5. Разгибание рук на блоке — 2 × 10–15.
+
+День 3 — плечи и ноги
+1. Присед или жим ногами — 1 тяжёлый подход 6–8, затем 2 × 8–10.
+2. Румынская тяга — 3 × 6–10.
+3. Жим гантелей сидя — 3 × 6–10.
+4. Подъёмы гантелей в стороны — 3 × 12–15.
+5. Подъёмы на икры — 3 × 10–15.
+
+Прогрессия: работай с 1–3 повторами в запасе. На 1–3 неделях добавляй повторения до верхней границы диапазона; затем добавь 2–5% веса и вернись к нижней границе. На 4-й неделе сделай разгрузку: сократи количество подходов примерно на треть и держи 3–4 повтора в запасе.""",
 }
 
 
-EXERCISES = {
-    "gym": {
-        "squat": "присед со штангой или жим ногами",
-        "hinge": "румынская тяга",
-        "push": "жим лёжа или в тренажёре",
-        "pull": "тяга горизонтального блока",
-        "vertical": "тяга верхнего блока",
-        "core": "планка или Pallof press",
-    },
-    "home": {
-        "squat": "приседания или сплит-приседания",
-        "hinge": "ягодичный мост или румынская тяга с доступным весом",
-        "push": "отжимания",
-        "pull": "тяга гантели, резинки или наполненного рюкзака",
-        "vertical": "жим гантелей/резинки вверх или pike-отжимания",
-        "core": "планка или dead bug",
-    },
-    "outdoors": {
-        "squat": "приседания или выпады",
-        "hinge": "одноногая румынская тяга",
-        "push": "отжимания от подходящей опоры",
-        "pull": "подтягивания или горизонтальная тяга на низкой перекладине",
-        "vertical": "pike-отжимания",
-        "core": "планка или подъёмы коленей",
-    },
+WORKOUT_TEMPLATES_EN = {
+    "beginner": "Ready-made beginner template: full body, three gym sessions per week for the first four weeks.",
+    "intermediate": "Ready-made intermediate template: chest/biceps, back/triceps, shoulders/legs, three gym sessions per week.",
+    "advanced": "Ready-made advanced template: the same three-day split with planned double progression and a deload week.",
 }
 
 
 def build_workout_program(profile: dict[str, Any], language: str = "ru") -> str:
-    """Return a conservative, evidence-informed resistance plan from declared workout data."""
+    """Select a stored workout template; this function never asks an LLM to invent a plan."""
+    place = str(profile.get("training_place", ""))
+    if place not in {"gym", "both"}:
+        if language == "en":
+            return "The current ready-made templates are for gym training. Tell me when you have gym access, and I will select the matching template."
+        return "Сейчас в библиотеке есть готовые шаблоны для зала. Когда будет доступ к залу, я подберу подходящий шаблон; для дома добавим отдельную проверенную программу."
+
     level = str(profile["training_experience"])
-    settings = LEVELS[level]
-    available_days = int(profile["training_days_per_week"])
-    planned_days = min(available_days, int(settings["max_days"]))
-    place = str(profile["training_place"])
-    exercises = EXERCISES["gym" if place == "both" else place]
-    sessions = _sessions(planned_days, exercises, settings)
-    if language == "en":
-        return _build_english_workout(profile, settings, planned_days, available_days, sessions)
-
-    goal_text = {
-        "weight_loss": "сохранение мышц во время снижения веса",
-        "muscle_gain": "рост мышечной массы",
-        "maintenance": "поддержание силы и формы",
-        "wellbeing": "самочувствие, силу и повседневную активность",
-    }[str(profile["goal"])]
-    header = (
-        f"План для уровня «{_level_label(level)}»: цель — {goal_text}. "
-        f"{planned_days} силовых тренировки в неделю"
-        + (f" из доступных {available_days}." if planned_days < available_days else ".")
-    )
-    lines = [header, "", "Разминка: 5–10 минут лёгкой активности и 1–3 разминочных подхода первого упражнения."]
-    for index, exercises_for_day in enumerate(sessions, start=1):
-        lines.append(f"День {index}: " + "; ".join(exercises_for_day) + ".")
-    lines.extend(
-        [
-            "",
-            f"Работайте с запасом {settings['rir']} повторения до отказа; отдыхайте 2–3 минуты после базовых упражнений и 1–2 минуты после остальных.",
-            "Прогрессия: когда верхняя граница повторений получается во всех подходах с чистой техникой, добавьте 1 повторение или 2–5% веса.",
-        ]
-    )
+    template = WORKOUT_TEMPLATES_EN[level] if language == "en" else WORKOUT_TEMPLATES_RU[level]
     if profile.get("medical_notes") or profile.get("injuries") or profile.get("is_pregnant"):
-        lines.extend(
-            [
-                "",
-                "Перед началом согласуйте нагрузку с врачом или профильным специалистом. Не выполняйте движения, вызывающие боль или ухудшение симптомов.",
-            ]
+        safety_note = (
+            "\n\nDiscuss exercise with an appropriate clinician before starting. Stop movements that cause pain or worsen symptoms."
+            if language == "en"
+            else "\n\nПри травмах, заболеваниях, беременности или боли согласуй нагрузку с профильным врачом. Не выполняй движения, которые вызывают боль или ухудшают симптомы."
         )
-    return "\n".join(lines)
-
-
-def _sessions(days: int, exercises: dict[str, str], settings: dict[str, Any]) -> list[list[str]]:
-    item = lambda key: f"{exercises[key]} — {settings['sets']} × {settings['reps']}"
-    full_a = [item("squat"), item("push"), item("pull"), item("hinge"), item("core")]
-    full_b = [item("hinge"), item("vertical"), item("pull"), item("squat"), item("core")]
-    if days <= 3:
-        return [full_a if day % 2 else full_b for day in range(1, days + 1)]
-    upper = [item("push"), item("pull"), item("vertical"), item("core")]
-    lower = [item("squat"), item("hinge"), item("core")]
-    return [upper if day % 2 else lower for day in range(1, days + 1)]
-
-
-def _level_label(level: str) -> str:
-    return {"beginner": "новичок", "intermediate": "средний", "advanced": "продвинутый"}[level]
-
-
-def _build_english_workout(
-    profile: dict[str, Any],
-    settings: dict[str, Any],
-    planned_days: int,
-    available_days: int,
-    sessions: list[list[str]],
-) -> str:
-    goal = {
-        "weight_loss": "preserve muscle while losing weight",
-        "muscle_gain": "build muscle",
-        "maintenance": "maintain strength and fitness",
-        "wellbeing": "improve wellbeing, strength, and daily activity",
-    }[str(profile["goal"])]
-    level = {"beginner": "beginner", "intermediate": "intermediate", "advanced": "advanced"}[
-        str(profile["training_experience"])
-    ]
-    lines = [
-        f"{level.title()} plan — goal: {goal}. {planned_days} strength sessions per week"
-        + (f" (out of {available_days} available days)." if planned_days < available_days else "."),
-        "",
-        "Warm up for 5–10 minutes and do 1–3 lighter sets before the first exercise.",
-    ]
-    for index, exercises_for_day in enumerate(sessions, start=1):
-        lines.append(f"Day {index}: " + "; ".join(exercises_for_day) + ".")
-    lines.extend(
-        [
-            "",
-            f"Keep {settings['rir']} reps in reserve; rest 2–3 minutes after compound exercises and 1–2 minutes after the others.",
-            "Progression: when you reach the top of the rep range in every set with good technique, add one repetition or 2–5% load.",
-        ]
-    )
-    if profile.get("medical_notes") or profile.get("injuries") or profile.get("is_pregnant"):
-        lines.extend(
-            [
-                "",
-                "Discuss exercise with an appropriate clinician before starting. Stop movements that cause pain or worsen symptoms.",
-            ]
-        )
-    return "\n".join(lines)
+        return template + safety_note
+    return template

@@ -92,7 +92,7 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
         facts["activity_level"] = "moderate"
     elif any(marker in text for marker in ("6 раз", "7 раз", "высок", "6 times", "7 times", "high activity")):
         facts["activity_level"] = "high"
-    elif any(marker in text for marker in ("не тренир", "сидяч", "малоподвиж", "sedentary", "don't train", "do not train")):
+    elif any(marker in text for marker in ("не тренир", "сидяч", "сижу", "малоподвиж", "sedentary", "don't train", "do not train")):
         facts["activity_level"] = "sedentary"
     if any(marker in text for marker in ("дома", "домашн", "home")):
         facts["training_place"] = "home"
@@ -100,11 +100,14 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
         facts["training_place"] = "both" if facts.get("training_place") == "home" else "gym"
     if any(marker in text for marker in ("улиц", "парк", "outdoor")):
         facts["training_place"] = "both" if facts.get("training_place") else "outdoors"
-    if any(marker in text for marker in ("нович", "начинающ", "beginner", "никогда не тренир")):
+    if any(marker in text for marker in ("нович", "начинающ", "до месяца", "меньше месяца", "beginner", "never trained")):
         facts["training_experience"] = "beginner"
-    elif any(marker in text for marker in ("продвин", "опытн", "advanced", "больше 3 лет", "более 3 лет")):
+    elif any(marker in text for marker in ("продвин", "advanced", "больше года", "более года", "over a year", "more than a year")) or re.search(
+        r"(?:тренир\w*|стаж|опыт\w*)\D{0,12}\b(?:[1-9]|[1-9]\d)\s*(?:лет|года|years?)\b|\b(?:[1-9]|[1-9]\d)[- ]?летн\w*\s+опыт",
+        text,
+    ):
         facts["training_experience"] = "advanced"
-    elif any(marker in text for marker in ("средн", "intermediate", "около года", "1 год", "2 года", "3 года")):
+    elif any(marker in text for marker in ("средн", "опытн", "intermediate", "от месяца до года", "несколько месяцев")) or re.search(r"\b(?:[1-9]|1[01])\s*(?:месяц(?:а|ев)?|months?)\b", text):
         facts["training_experience"] = "intermediate"
     days = re.search(
         r"\b([1-7])\s*(?:раза?|дн(?:я|ей)|times?|days?)\s*(?:в|per|a)?\s*(?:недел|week)",

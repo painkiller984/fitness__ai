@@ -325,7 +325,7 @@ def configure_pages(settings: Settings) -> None:
                     reply = urgent_reply
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
-                elif state["active_workflow"] == "workout" and onboarding_stage is None and complete_profile:
+                elif state["active_workflow"] == "workout" and onboarding_stage is None:
                     reply = build_workout_program(profile_context, language)
                     state["active_workflow"] = None
                     state["memory"].add("user", message)

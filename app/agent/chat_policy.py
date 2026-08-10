@@ -120,7 +120,7 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
         "both": "несколько мест",
         "outdoors": "улица или парк",
         "beginner": "новичок",
-        "intermediate": "средний",
+        "intermediate": "опытный",
         "advanced": "продвинутый",
     }
     translations_en = {

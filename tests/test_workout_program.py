@@ -3,11 +3,8 @@ from app.tools.workout_program import build_workout_program
 
 def profile(**overrides):
     data = {
-        "goal": "muscle_gain",
         "training_place": "gym",
         "training_experience": "beginner",
-        "training_days_per_week": 3,
-        "available_equipment": ["machines"],
         "injuries": [],
         "medical_notes": "",
         "is_pregnant": False,
@@ -16,33 +13,37 @@ def profile(**overrides):
     return data
 
 
-def test_beginner_program_uses_conservative_volume() -> None:
+def test_beginner_template_is_fixed_full_body_for_first_month() -> None:
     program = build_workout_program(profile())
-    assert "уровня «новичок»" in program
-    assert "2–3 × 8–12" in program
-    assert "3–4 повторения" in program
+
+    assert "первые 4 недели" in program
+    assert "full body" in program
+    assert "3 раза в неделю" in program
 
 
-def test_intermediate_and_advanced_plans_are_different() -> None:
-    intermediate = build_workout_program(profile(training_experience="intermediate", training_days_per_week=4))
-    advanced = build_workout_program(profile(training_experience="advanced", training_days_per_week=5))
-    assert "уровня «средний»" in intermediate
-    assert "3 × 6–12" in intermediate
-    assert "уровня «продвинутый»" in advanced
-    assert "3–4 × 5–15" in advanced
+def test_intermediate_template_is_the_requested_three_day_split() -> None:
+    program = build_workout_program(profile(training_experience="intermediate"))
+
+    assert "грудь и бицепс" in program
+    assert "спина и трицепс" in program
+    assert "плечи и ноги" in program
 
 
-def test_beginner_training_days_are_capped_for_recovery() -> None:
-    program = build_workout_program(profile(training_days_per_week=7))
-    assert "3 силовых тренировки в неделю из доступных 7" in program
+def test_advanced_template_adds_progression() -> None:
+    program = build_workout_program(profile(training_experience="advanced"))
+
+    assert "Прогрессия" in program
+    assert "разгрузку" in program
 
 
-def test_health_note_keeps_conservative_plan_and_referral() -> None:
+def test_health_note_keeps_template_and_adds_referral() -> None:
     program = build_workout_program(profile(medical_notes="Болит колено"))
+
+    assert "первые 4 недели" in program
     assert "врачом" in program
 
 
-def test_program_uses_english_when_requested() -> None:
-    program = build_workout_program(profile(), language="en")
-    assert "Beginner plan" in program
-    assert "Day 1" in program
+def test_non_gym_user_does_not_receive_gym_template() -> None:
+    program = build_workout_program(profile(training_place="home"))
+
+    assert "для зала" in program
