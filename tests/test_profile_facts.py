@@ -34,6 +34,16 @@ def test_extractor_does_not_store_arbitrary_i_am_phrase_as_name() -> None:
     assert "name" not in extract_profile_facts("я новичок")
 
 
+def test_expected_name_accepts_a_bare_name_but_not_a_greeting() -> None:
+    assert extract_profile_facts("Антон", {"name"}) == {"name": "Антон"}
+    assert extract_profile_facts("Привет", {"name"}) == {}
+
+
+def test_expected_body_fields_accept_a_free_form_summary() -> None:
+    facts = extract_profile_facts("27, мужчина, 172, 94", {"age", "sex", "height_cm", "weight_kg"})
+    assert facts == {"age": 27, "sex": "male", "height_cm": 172, "weight_kg": 94.0}
+
+
 def test_extracts_english_profile_facts() -> None:
     facts = extract_profile_facts(
         "My name is Alex, I am a 30 years old man, height 178 cm, I weigh 93 kg, "

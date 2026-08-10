@@ -18,6 +18,7 @@ from app.agent.chat_policy import (
     target_facts,
 )
 from app.agent.orchestrator import FitnessAgent
+from app.agent.onboarding import current_onboarding_stage, onboarding_context
 from app.agent.profile_facts import extract_profile_facts, is_valid_profile_name
 from app.agent.router import route_intent
 from app.config import Settings
@@ -77,7 +78,13 @@ def configure_pages(settings: Settings) -> None:
             </style>
             """
         )
-        state: dict[str, Any] = {"memory": ConversationMemory(), "profile": None, "token": None, "user_id": None}
+        state: dict[str, Any] = {
+            "memory": ConversationMemory(),
+            "profile": None,
+            "pending_facts": {},
+            "token": None,
+            "user_id": None,
+        }
 
         def activate_local_fallback(seed: dict[str, Any] | None = None) -> None:
             user_id = app.storage.user.get("local_profile_id") or str(uuid4())
@@ -229,6 +236,7 @@ def configure_pages(settings: Settings) -> None:
                         activate_local_fallback()
                     state["profile"] = None
                     state["memory"] = ConversationMemory()
+                    state["pending_facts"] = {}
                     typing.delete()
                     add_bubble(
                         "Your data has been cleared and queued for permanent deletion. You can start again by telling me about yourself."
@@ -240,6 +248,7 @@ def configure_pages(settings: Settings) -> None:
                     local_profiles.delete(state["user_id"])
                     state["profile"] = None
                     state["memory"] = ConversationMemory()
+                    state["pending_facts"] = {}
                     typing.delete()
                     add_bubble(
                         "Your local profile has been deleted. You can start again by telling me about yourself."
@@ -251,12 +260,26 @@ def configure_pages(settings: Settings) -> None:
                     typing.delete()
                     add_bubble(format_profile_data(state["profile"], language))
                     return
-                facts = extract_profile_facts(message)
+                known_profile = {
+                    **public_profile_context(state["profile"]),
+                    **state["pending_facts"],
+                }
+                expected_stage = current_onboarding_stage(known_profile)
+                expected_fields = set(expected_stage.missing_fields) if expected_stage else set()
+                facts = extract_profile_facts(message, expected_fields)
+                combined_facts = {**state["pending_facts"], **facts}
+                can_persist = bool(known_profile.get("name") or combined_facts.get("name"))
+                if not can_persist:
+                    state["pending_facts"] = combined_facts
+                    facts_to_save: dict[str, Any] = {}
+                else:
+                    facts_to_save = combined_facts
+                    state["pending_facts"] = {}
                 if gateway and state["token"]:
                     try:
-                        if facts:
+                        if facts_to_save:
                             state["profile"] = await gateway.save_anonymous_facts(
-                                state["token"], state["user_id"], facts
+                                state["token"], state["user_id"], facts_to_save
                             )
                         elif state["profile"]:
                             state["profile"] = await gateway.touch_anonymous_profile(
@@ -264,14 +287,20 @@ def configure_pages(settings: Settings) -> None:
                             )
                     except SupabaseError:
                         activate_local_fallback({**(state["profile"] or {}), **facts})
-                elif facts:
-                    state["profile"] = local_profiles.save(state["user_id"], facts)
+                elif facts_to_save:
+                    state["profile"] = local_profiles.save(state["user_id"], facts_to_save)
                 elif state["profile"]:
                     state["profile"] = local_profiles.touch(state["user_id"])
                 profile_context = {
                     key: value.isoformat() if isinstance(value, (date, datetime)) else value
-                    for key, value in public_profile_context(state["profile"]).items()
+                    for key, value in {
+                        **public_profile_context(state["profile"]),
+                        **state["pending_facts"],
+                    }.items()
                 }
+                onboarding_stage = current_onboarding_stage(profile_context)
+                if onboarding_stage:
+                    profile_context["_onboarding"] = onboarding_context(onboarding_stage, language)
                 urgent_reply = urgent_message_if_needed(message)
                 complete_profile = build_complete_profile(profile_context)
                 if complete_profile:

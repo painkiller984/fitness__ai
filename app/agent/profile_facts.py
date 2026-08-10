@@ -24,6 +24,10 @@ NON_NAME_WORDS = {
     "weight-loss",
     "weight_loss",
     "maintenance",
+    "привет",
+    "здравствуйте",
+    "hello",
+    "hi",
 }
 
 
@@ -35,7 +39,7 @@ def is_valid_profile_name(value: Any) -> bool:
     return bool(re.fullmatch(r"[а-яёa-z][а-яёa-z-]{1,79}", normalized, re.I)) and normalized not in NON_NAME_WORDS
 
 
-def extract_profile_facts(message: str) -> dict[str, Any]:
+def extract_profile_facts(message: str, expected_fields: set[str] | None = None) -> dict[str, Any]:
     """Extract only explicitly stated, durable profile facts from a user message."""
     text = message.casefold()
     facts: dict[str, Any] = {}
@@ -53,6 +57,8 @@ def extract_profile_facts(message: str) -> dict[str, Any]:
     name = name or short_name
     if name and is_valid_profile_name(name.group(1)):
         facts["name"] = name.group(1).capitalize()
+    elif expected_fields and "name" in expected_fields and is_valid_profile_name(message.strip()):
+        facts["name"] = message.strip().capitalize()
     age = re.search(r"\b(\d{2})\s*(?:лет|года|год|years? old)\b", text)
     if age and 14 <= int(age.group(1)) <= 100:
         facts["age"] = int(age.group(1))
@@ -61,6 +67,7 @@ def extract_profile_facts(message: str) -> dict[str, Any]:
     if height and 120 <= int(height.group(1)) <= 230:
         facts["height_cm"] = int(height.group(1))
     weight = re.search(r"(?:вес|вешу|weight|weigh)\D{0,12}(\d{2,3}(?:[.,]\d+)?)\b", text)
+    weight = weight or re.search(r"\b(\d{2,3}(?:[.,]\d+)?)\s*(?:кг|kg)\b", text)
     if weight and 35 <= float(weight.group(1).replace(",", ".")) <= 350:
         facts["weight_kg"] = float(weight.group(1).replace(",", "."))
     if re.search(r"\b(?:female|woman)\b", text):
@@ -87,7 +94,36 @@ def extract_profile_facts(message: str) -> dict[str, Any]:
         facts["activity_level"] = "high"
     elif any(marker in text for marker in ("не тренир", "сидяч", "малоподвиж", "sedentary", "don't train", "do not train")):
         facts["activity_level"] = "sedentary"
+    if expected_fields and {"age", "sex", "height_cm", "weight_kg"} & expected_fields:
+        facts.update(_extract_expected_body_values(message, facts))
     return facts
+
+
+def _extract_expected_body_values(message: str, existing: dict[str, Any]) -> dict[str, Any]:
+    """Read an ordered free-form body summary while the onboarding flow expects it."""
+    result: dict[str, Any] = {}
+    numbers = [float(value.replace(",", ".")) for value in re.findall(r"\b\d{2,3}(?:[.,]\d+)?\b", message)]
+    for field in ("age", "height_cm", "weight_kg"):
+        if field in existing:
+            try:
+                numbers.remove(float(existing[field]))
+            except (TypeError, ValueError):
+                pass
+    if "age" not in existing:
+        age = next((value for value in numbers if 14 <= value <= 100), None)
+        if age is not None:
+            result["age"] = int(age)
+            numbers.remove(age)
+    if "height_cm" not in existing:
+        height = next((value for value in numbers if 120 <= value <= 230), None)
+        if height is not None:
+            result["height_cm"] = int(height)
+            numbers.remove(height)
+    if "weight_kg" not in existing:
+        weight = next((value for value in numbers if 35 <= value <= 350), None)
+        if weight is not None:
+            result["weight_kg"] = weight
+    return result
 
 
 def _extract_compact_profile(message: str) -> dict[str, Any]:
