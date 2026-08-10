@@ -163,7 +163,6 @@ def configure_pages(settings: Settings) -> None:
                     "Рассчитать калории",
                     "Составить тренировку",
                     "Подобрать меню",
-                    "Добавить зефир 30 г",
                     "Покажи мои данные",
                     "Удалить мои данные",
                 )
@@ -339,14 +338,7 @@ def configure_pages(settings: Settings) -> None:
                 else:
                     workflow_intent = state["active_workflow"] or intent
                     if workflow_intent == "meal_plan" and complete_profile:
-                        reply = build_daily_menu(
-                            calculate_nutrition_targets(complete_profile),
-                            include_zephyr=(
-                                (intent == "meal_adjustment" or "зефир" in normalized or "zephyr" in normalized)
-                                and not any(phrase in normalized for phrase in ("без зефира", "без зефир", "without zephyr"))
-                            ),
-                            language=language,
-                        )
+                        reply = build_daily_menu(calculate_nutrition_targets(complete_profile), language=language)
                         state["active_workflow"] = None
                         state["memory"].add("user", message)
                         state["memory"].add("assistant", reply)

@@ -22,11 +22,9 @@ def test_menu_shows_calculated_total_and_target_delta() -> None:
     assert "1874 ккал" in menu
 
 
-def test_zephyr_swap_is_exact_and_visible() -> None:
-    base = build_daily_menu(targets())
-    zephyr = build_daily_menu(targets(), include_zephyr=True)
+def test_menu_requests_generic_product_data_for_an_accurate_adjustment() -> None:
+    menu = build_daily_menu(targets())
 
-    assert "Зефир — 30 г" in zephyr
-    assert "заменяет 80 г гречки" in zephyr
-    assert base != zephyr
-    assert "заменить рыбу" not in base
+    assert "шоколад, зефир или другой" in menu
+    assert "КБЖУ с упаковки на 100 г" in menu
+    assert "Зефир — 30 г" not in menu
