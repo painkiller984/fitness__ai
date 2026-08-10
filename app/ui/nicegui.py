@@ -19,7 +19,7 @@ from app.agent.chat_policy import (
 )
 from app.agent.orchestrator import FitnessAgent
 from app.agent.onboarding import current_onboarding_stage, onboarding_context
-from app.agent.profile_facts import extract_profile_facts, is_valid_profile_name
+from app.agent.profile_facts import extract_durable_dietary_preferences, extract_profile_facts, is_valid_profile_name
 from app.agent.router import route_intent
 from app.config import Settings
 from app.guards.safety import urgent_message_if_needed
@@ -28,7 +28,12 @@ from app.providers.factory import create_provider_bundle
 from app.repositories.local_memory import LocalProfileStore
 from app.repositories.supabase import SupabaseError, SupabaseGateway
 from app.tools.calorie_macros import calculate_nutrition_targets
-from app.tools.menu_templates import build_daily_menu
+from app.tools.menu_templates import (
+    build_daily_menu,
+    build_menu_with_found_food,
+    is_known_food,
+    requested_portion_grams,
+)
 from app.tools.workout_program import build_workout_program
 
 
@@ -279,6 +284,10 @@ def configure_pages(settings: Settings) -> None:
                 expected_stage = current_onboarding_stage(known_profile, state["active_workflow"])
                 expected_fields = set(expected_stage.missing_fields) if expected_stage else set()
                 facts = extract_profile_facts(message, expected_fields)
+                preferences = extract_durable_dietary_preferences(message)
+                if preferences:
+                    saved_preferences = list(known_profile.get("dietary_preferences") or [])
+                    facts["dietary_preferences"] = list(dict.fromkeys([*saved_preferences, *preferences]))
                 combined_facts = {**state["pending_facts"], **facts}
                 can_persist = bool(known_profile.get("name") or combined_facts.get("name"))
                 if not can_persist:
@@ -338,7 +347,28 @@ def configure_pages(settings: Settings) -> None:
                 else:
                     workflow_intent = state["active_workflow"] or intent
                     if workflow_intent == "meal_plan" and complete_profile:
-                        reply = build_daily_menu(calculate_nutrition_targets(complete_profile), language=language)
+                        targets = calculate_nutrition_targets(complete_profile)
+                        if intent == "meal_adjustment" and not is_known_food(message) and provider.food_search:
+                            found_food = await provider.food_search.lookup(message)
+                            portion = requested_portion_grams(message)
+                            if found_food and portion:
+                                reply = build_menu_with_found_food(
+                                    targets, profile_context, name=found_food.name, grams=portion,
+                                    kcal_per_100g=found_food.kcal_per_100g,
+                                    protein_per_100g=found_food.protein_per_100g,
+                                    fat_per_100g=found_food.fat_per_100g,
+                                    carbs_per_100g=found_food.carbs_per_100g,
+                                    sources=found_food.sources,
+                                )
+                            elif found_food:
+                                reply = (
+                                    f"Нашёл данные для «{found_food.name}»: {found_food.kcal_per_100g:g} ккал на 100 г. "
+                                    f"Напиши порцию в граммах — и я сразу внесу продукт в текущий расчёт. Источник: {found_food.sources[0]}"
+                                )
+                            else:
+                                reply = "Не удалось надёжно найти КБЖУ этого продукта. Пришли фото или данные с упаковки — я учту их в расчёте."
+                        else:
+                            reply = build_daily_menu(targets, profile_context, language=language)
                         state["active_workflow"] = None
                         state["memory"].add("user", message)
                         state["memory"].add("assistant", reply)

@@ -3,103 +3,99 @@ from __future__ import annotations
 from typing import Any
 
 
-WORKOUT_TEMPLATES_RU = {
-    "beginner": """Готовый шаблон: «Новичок — первые 4 недели»
-
-Формат: full body, 3 раза в неделю, например пн / ср / пт. Шаблон рассчитан на тренировки в зале.
-
-Тренировка A
-1. Жим ногами или присед в тренажёре — 2 × 8–12.
-2. Жим лёжа в тренажёре или с гантелями — 2 × 8–12.
-3. Тяга горизонтального блока — 2 × 8–12.
-4. Румынская тяга с гантелями — 2 × 8–12.
-5. Планка — 2 × 20–40 секунд.
-
-Тренировка B
-1. Гоблет-присед или жим ногами — 2 × 8–12.
-2. Тяга верхнего блока — 2 × 8–12.
-3. Жим гантелей на наклонной скамье — 2 × 8–12.
-4. Гиперэкстензия или ягодичный мост — 2 × 10–15.
-5. Dead bug — 2 × 8–12 на сторону.
-
-Чередуй A / B / A в первую неделю, затем B / A / B. Оставляй 3–4 повтора в запасе, отдыхай 1–2 минуты. Когда во всех подходах достигаешь верхней границы повторений с чистой техникой — добавь 1 повтор или минимальный вес.""",
-    "intermediate": """Готовый шаблон: «Опытный — стаж от месяца до года»
-
-Формат: сплит 3 раза в неделю, например пн / ср / пт. Шаблон рассчитан на тренировки в зале.
-
-День 1 — грудь и бицепс
-1. Жим лёжа — 3 × 6–10.
-2. Жим гантелей на наклонной скамье — 3 × 8–12.
-3. Сведения в тренажёре — 2 × 12–15.
-4. Сгибание рук со штангой или EZ-грифом — 3 × 8–12.
-5. Молотки с гантелями — 2 × 10–15.
-
-День 2 — спина и трицепс
-1. Тяга верхнего блока — 3 × 8–12.
-2. Тяга горизонтального блока — 3 × 8–12.
-3. Тяга гантели в наклоне — 2 × 10–12.
-4. Разгибание рук на блоке — 3 × 8–12.
-5. Французский жим с гантелью или канатом — 2 × 10–15.
-
-День 3 — плечи и ноги
-1. Присед или жим ногами — 3 × 6–10.
-2. Румынская тяга — 3 × 8–12.
-3. Жим гантелей сидя — 3 × 8–12.
-4. Подъёмы гантелей в стороны — 2 × 12–15.
-5. Подъёмы на икры — 3 × 10–15.
-
-Оставляй 2–3 повтора в запасе. Отдых: 2–3 минуты в базовых упражнениях, 1–2 минуты в изоляции. Когда достигаешь верхней границы повторений во всех подходах — добавь 1 повтор или 2–5% веса.""",
-    "advanced": """Готовый шаблон: «Продвинутый — стаж больше года»
-
-Формат: сплит 3 раза в неделю, например пн / ср / пт. Это тот же базовый сплит, но с запланированной прогрессией. Шаблон рассчитан на тренировки в зале.
-
-День 1 — грудь и бицепс
-1. Жим лёжа — 1 тяжёлый подход 6–8, затем 2 × 8–10.
-2. Жим гантелей на наклонной скамье — 3 × 8–12.
-3. Сведения в тренажёре — 3 × 12–15.
-4. Сгибание рук со штангой или EZ-грифом — 3 × 6–10.
-5. Молотки с гантелями — 2 × 10–15.
-
-День 2 — спина и трицепс
-1. Тяга верхнего блока или подтягивания — 3 × 6–10.
-2. Тяга штанги или T-грифа — 3 × 6–10.
-3. Тяга горизонтального блока — 2 × 10–12.
-4. Жим узким хватом или отжимания на брусьях с контролем — 3 × 6–10.
-5. Разгибание рук на блоке — 2 × 10–15.
-
-День 3 — плечи и ноги
-1. Присед или жим ногами — 1 тяжёлый подход 6–8, затем 2 × 8–10.
-2. Румынская тяга — 3 × 6–10.
-3. Жим гантелей сидя — 3 × 6–10.
-4. Подъёмы гантелей в стороны — 3 × 12–15.
-5. Подъёмы на икры — 3 × 10–15.
-
-Прогрессия: работай с 1–3 повторами в запасе. На 1–3 неделях добавляй повторения до верхней границы диапазона; затем добавь 2–5% веса и вернись к нижней границе. На 4-й неделе сделай разгрузку: сократи количество подходов примерно на треть и держи 3–4 повтора в запасе.""",
+GYM = {
+    "squat": "присед со штангой или жим ногами",
+    "hinge": "румынская тяга",
+    "push": "жим лёжа или жим гантелей",
+    "pull": "тяга верхнего или горизонтального блока",
+    "shoulders": "жим гантелей сидя и подъёмы в стороны",
+    "glutes": "ягодичный мост или хип-траст",
 }
-
-
-WORKOUT_TEMPLATES_EN = {
-    "beginner": "Ready-made beginner template: full body, three gym sessions per week for the first four weeks.",
-    "intermediate": "Ready-made intermediate template: chest/biceps, back/triceps, shoulders/legs, three gym sessions per week.",
-    "advanced": "Ready-made advanced template: the same three-day split with planned double progression and a deload week.",
+HOME = {
+    "squat": "гоблет-присед или присед с собственным весом",
+    "hinge": "румынская тяга с гантелями или ягодичный мост",
+    "push": "отжимания или жим гантелей на полу",
+    "pull": "тяга гантели в наклоне или тяга резины",
+    "shoulders": "жим гантелей стоя или подъёмы с резиной",
+    "glutes": "ягодичный мост или болгарские выпады",
 }
 
 
 def build_workout_program(profile: dict[str, Any], language: str = "ru") -> str:
-    """Select a stored workout template; this function never asks an LLM to invent a plan."""
-    place = str(profile.get("training_place", ""))
-    if place not in {"gym", "both"}:
-        if language == "en":
-            return "The current ready-made templates are for gym training. Tell me when you have gym access, and I will select the matching template."
-        return "Сейчас в библиотеке есть готовые шаблоны для зала. Когда будет доступ к залу, я подберу подходящий шаблон; для дома добавим отдельную проверенную программу."
+    """Assemble a bounded program; an LLM never invents the training framework."""
+    if language == "en":
+        return "The flexible workout library is currently provided in Russian. Please switch to Russian for a full program."
 
-    level = str(profile["training_experience"])
-    template = WORKOUT_TEMPLATES_EN[level] if language == "en" else WORKOUT_TEMPLATES_RU[level]
+    place = str(profile.get("training_place") or "gym")
+    library = HOME if place == "home" else GYM
+    level = str(profile.get("training_experience") or "beginner")
+    days = int(profile.get("training_days_per_week") or 3)
+    days = min(max(days, 2), 4)
+    focus = _focus(profile)
+    goal = str(profile.get("goal") or "maintenance")
+    sex = str(profile.get("sex") or "male")
+    health_note = _health_note(profile)
+    schedule = "2 тренировки" if days == 2 else f"{days} тренировки"
+
+    if level == "beginner":
+        body = _full_body(library, days, goal, focus)
+        heading = "Новичок: full-body, первые 4 недели"
+    else:
+        body = _split(library, days, level, goal, focus)
+        heading = "Опытный: сплит" if level == "intermediate" else "Продвинутый: сплит с прогрессией"
+    default_focus = "верх тела" if sex == "male" else "ноги и ягодицы"
+    focus_line = f"Акцент: {focus or default_focus}."
+    progression = _progression(level, goal)
+    return "\n\n".join([
+        f"**{heading}** — {schedule} в неделю, место: {'дом' if place == 'home' else 'зал'}.",
+        focus_line,
+        body,
+        progression,
+        "Перед тренировкой: 5–10 минут лёгкой разминки и 1–2 разминочных подхода первого упражнения."
+        + health_note,
+    ])
+
+
+def _full_body(library: dict[str, str], days: int, goal: str, focus: str | None) -> str:
+    sets = "2" if goal == "weight_loss" else "3"
+    base = [library["squat"], library["push"], library["pull"], library["hinge"], library["shoulders"]]
+    if focus == "ноги и ягодицы":
+        base.insert(2, library["glutes"])
+    if focus == "верх тела":
+        base.extend([library["push"], library["pull"]])
+    return "**Тренировка A/B:**\n" + "\n".join(
+        f"{index}. {exercise} — {sets} × 8–12." for index, exercise in enumerate(base[:6], 1)
+    ) + ("\nЧередуй A/B; при 3 днях: A/B/A, затем B/A/B." if days >= 3 else "\nЧередуй A и B.")
+
+
+def _split(library: dict[str, str], days: int, level: str, goal: str, focus: str | None) -> str:
+    sets = "3" if level == "intermediate" else "3–4"
+    extra = " + дополнительный подход" if focus else ""
+    sessions = [
+        f"**День 1 — грудь и бицепс:** {library['push']} — {sets} × 6–10; жим под наклоном — {sets} × 8–12; сгибание рук — 2–3 × 10–15{extra}.",
+        f"**День 2 — спина и трицепс:** {library['pull']} — {sets} × 8–12; тяга в наклоне — {sets} × 8–12; разгибание рук — 2–3 × 10–15.",
+        f"**День 3 — плечи и ноги:** {library['squat']} — {sets} × 6–10; {library['hinge']} — {sets} × 8–12; {library['shoulders']} — 2–3 × 10–15; {library['glutes']} — 2–3 × 8–12{extra if focus == 'ноги и ягодицы' else ''}.",
+    ]
+    return "\n".join(sessions[:days])
+
+
+def _focus(profile: dict[str, Any]) -> str | None:
+    value = str(profile.get("muscle_focus") or "").casefold()
+    if any(word in value for word in ("ягод", "ног")):
+        return "ноги и ягодицы"
+    if any(word in value for word in ("верх", "груд", "спин", "плеч")):
+        return "верх тела"
+    return None
+
+
+def _progression(level: str, goal: str) -> str:
+    reserve = "3–4" if goal == "weight_loss" else "1–3"
+    if level == "advanced":
+        return f"Прогрессия: держи {reserve} повтора в запасе. Когда верхняя граница повторений достигнута во всех подходах — прибавь 2–5% веса. Каждая 4-я неделя: разгрузка, минус примерно треть подходов."
+    return f"Прогрессия: держи {reserve} повтора в запасе. Сначала доведи все подходы до верхней границы повторений, затем добавь минимальный вес."
+
+
+def _health_note(profile: dict[str, Any]) -> str:
     if profile.get("medical_notes") or profile.get("injuries") or profile.get("is_pregnant"):
-        safety_note = (
-            "\n\nDiscuss exercise with an appropriate clinician before starting. Stop movements that cause pain or worsen symptoms."
-            if language == "en"
-            else "\n\nПри травмах, заболеваниях, беременности или боли согласуй нагрузку с профильным врачом. Не выполняй движения, которые вызывают боль или ухудшают симптомы."
-        )
-        return template + safety_note
-    return template
+        return "\n\nПри травмах, заболеваниях, беременности или боли согласуй нагрузку с профильным специалистом. Не выполняй движение, которое вызывает или усиливает боль."
+    return ""

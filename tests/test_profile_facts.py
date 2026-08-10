@@ -1,4 +1,4 @@
-from app.agent.profile_facts import extract_profile_facts
+from app.agent.profile_facts import extract_durable_dietary_preferences, extract_profile_facts
 
 
 def test_extracts_only_explicit_profile_facts() -> None:
@@ -132,3 +132,7 @@ def test_unknown_or_full_gym_equipment_counts_as_answer() -> None:
 def test_extracts_experience_duration_without_confusing_age() -> None:
     assert extract_profile_facts("Мне 30 лет, тренируюсь 2 года")["training_experience"] == "advanced"
     assert extract_profile_facts("Тренируюсь 6 месяцев")["training_experience"] == "intermediate"
+
+
+def test_extracts_only_explicit_durable_food_preferences() -> None:
+    assert extract_durable_dietary_preferences("Не люблю гречку, но сегодня хочу шоколад") == ["гречку"]

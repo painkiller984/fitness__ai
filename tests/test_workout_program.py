@@ -3,47 +3,47 @@ from app.tools.workout_program import build_workout_program
 
 def profile(**overrides):
     data = {
-        "training_place": "gym",
-        "training_experience": "beginner",
-        "injuries": [],
-        "medical_notes": "",
-        "is_pregnant": False,
+        "training_place": "gym", "training_experience": "beginner", "training_days_per_week": 3,
+        "sex": "male", "injuries": [], "medical_notes": "", "is_pregnant": False,
     }
     data.update(overrides)
     return data
 
 
-def test_beginner_template_is_fixed_full_body_for_first_month() -> None:
+def test_beginner_uses_full_body_for_first_month() -> None:
     program = build_workout_program(profile())
-
     assert "первые 4 недели" in program
-    assert "full body" in program
-    assert "3 раза в неделю" in program
+    assert "full-body" in program
+    assert "3 тренировки" in program
 
 
-def test_intermediate_template_is_the_requested_three_day_split() -> None:
+def test_intermediate_keeps_three_day_split() -> None:
     program = build_workout_program(profile(training_experience="intermediate"))
-
     assert "грудь и бицепс" in program
     assert "спина и трицепс" in program
     assert "плечи и ноги" in program
 
 
-def test_advanced_template_adds_progression() -> None:
+def test_advanced_template_adds_planned_deload() -> None:
     program = build_workout_program(profile(training_experience="advanced"))
-
     assert "Прогрессия" in program
-    assert "разгрузку" in program
+    assert "Каждая 4-я неделя" in program
 
 
-def test_health_note_keeps_template_and_adds_referral() -> None:
+def test_health_note_keeps_program_and_adds_referral() -> None:
     program = build_workout_program(profile(medical_notes="Болит колено"))
-
     assert "первые 4 недели" in program
-    assert "врачом" in program
+    assert "профильным специалистом" in program
 
 
-def test_non_gym_user_does_not_receive_gym_template() -> None:
+def test_home_user_receives_home_exercise_variants() -> None:
     program = build_workout_program(profile(training_place="home"))
+    assert "место: дом" in program
+    assert "гоблет-присед" in program
 
-    assert "для зала" in program
+
+def test_female_default_and_explicit_focus_change_the_accent() -> None:
+    female = build_workout_program(profile(sex="female"))
+    upper = build_workout_program(profile(sex="female", muscle_focus="верх тела"))
+    assert "Акцент: ноги и ягодицы" in female
+    assert "Акцент: верх тела" in upper

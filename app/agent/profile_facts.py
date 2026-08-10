@@ -136,6 +136,19 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
     return facts
 
 
+def extract_durable_dietary_preferences(message: str) -> list[str]:
+    """Keep only explicit long-term likes, dislikes and dietary patterns."""
+    text = message.casefold().strip()
+    patterns = (
+        r"(?:не люблю|не ем|избегаю|аллергия на)\s+([а-яёa-z][а-яёa-z -]{1,40})",
+        r"(?<!не )(?:люблю|предпочитаю)\s+(?:есть\s+)?([а-яёa-z][а-яёa-z -]{1,40})",
+    )
+    preferences = [match.group(1).strip(" .,!?") for pattern in patterns if (match := re.search(pattern, text, re.I))]
+    if any(word in text for word in ("вегетариан", "vegetarian")):
+        preferences.append("вегетарианство")
+    return list(dict.fromkeys(item for item in preferences if len(item) > 1))
+
+
 def _extract_equipment(text: str) -> list[str] | None:
     if any(marker in text for marker in ("без оборудования", "ничего нет", "только свой вес", "no equipment", "bodyweight only")):
         return []
