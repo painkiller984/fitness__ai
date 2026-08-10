@@ -18,7 +18,7 @@ from app.agent.chat_policy import (
     target_facts,
 )
 from app.agent.orchestrator import FitnessAgent
-from app.agent.profile_facts import extract_profile_facts
+from app.agent.profile_facts import extract_profile_facts, is_valid_profile_name
 from app.agent.router import route_intent
 from app.config import Settings
 from app.guards.safety import urgent_message_if_needed
@@ -122,6 +122,19 @@ def configure_pages(settings: Settings) -> None:
                 app.storage.user["local_profile_id"] = user_id
             state["user_id"] = user_id
             state["profile"] = local_profiles.get(user_id)
+
+        # Repair values written by older compact-profile parsing logic, which could
+        # mistake a goal such as "похудение" for the user's name.
+        if state["profile"] and state["profile"].get("name") and not is_valid_profile_name(state["profile"]["name"]):
+            if gateway and state["token"]:
+                try:
+                    state["profile"] = await gateway.save_anonymous_facts(
+                        state["token"], state["user_id"], {"name": None}
+                    )
+                except SupabaseError:
+                    activate_local_fallback({**state["profile"], "name": None})
+            else:
+                state["profile"] = local_profiles.save(state["user_id"], {"name": None})
 
         with ui.column().classes("chat-shell w-full no-wrap"):
             with ui.row().classes("topbar w-full items-center justify-between px-4 py-3"):

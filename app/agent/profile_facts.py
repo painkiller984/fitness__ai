@@ -16,7 +16,23 @@ NON_NAME_WORDS = {
     "устала",
     "готов",
     "готова",
+    "похудение",
+    "похудеть",
+    "снижение",
+    "поддержание",
+    "набор",
+    "weight-loss",
+    "weight_loss",
+    "maintenance",
 }
+
+
+def is_valid_profile_name(value: Any) -> bool:
+    """Return whether a stored value looks like an explicitly supplied personal name."""
+    if not isinstance(value, str):
+        return False
+    normalized = value.strip().casefold()
+    return bool(re.fullmatch(r"[а-яёa-z][а-яёa-z-]{1,79}", normalized, re.I)) and normalized not in NON_NAME_WORDS
 
 
 def extract_profile_facts(message: str) -> dict[str, Any]:
@@ -35,7 +51,7 @@ def extract_profile_facts(message: str) -> dict[str, Any]:
         re.I,
     )
     name = name or short_name
-    if name and name.group(1).casefold() not in NON_NAME_WORDS:
+    if name and is_valid_profile_name(name.group(1)):
         facts["name"] = name.group(1).capitalize()
     age = re.search(r"\b(\d{2})\s*(?:лет|года|год|years? old)\b", text)
     if age and 14 <= int(age.group(1)) <= 100:
@@ -99,8 +115,7 @@ def _extract_compact_profile(message: str) -> dict[str, Any]:
             "maintain",
         )
     )
-    name_match = re.fullmatch(r"[а-яёa-z][а-яёa-z-]{1,79}", parts[0], re.I)
-    if not (name_match and has_sex and has_goal):
+    if not (is_valid_profile_name(parts[0]) and has_sex and has_goal):
         return {}
 
     result: dict[str, Any] = {"name": parts[0].capitalize()}

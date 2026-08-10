@@ -67,3 +67,12 @@ def test_extracts_compact_unlabelled_profile_summary() -> None:
 
 def test_compact_parser_does_not_guess_without_profile_context() -> None:
     assert extract_profile_facts("Антон, 27, привет, 172, 93") == {}
+
+
+def test_compact_parser_does_not_store_goal_as_name() -> None:
+    facts = extract_profile_facts(
+        "похудение, 27, мужской, 172, 94, в основном сижу и тренируюсь 3 раза в неделю"
+    )
+
+    assert "name" not in facts
+    assert facts["goal"] == "weight_loss"
