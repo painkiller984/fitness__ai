@@ -160,7 +160,7 @@ def configure_pages(settings: Settings) -> None:
                                     item.classes("danger-action")
                 with ui.row().classes("composer w-full items-center px-3 py-1 gap-2"):
                     question = ui.textarea(placeholder="Напишите сообщение…").props("autogrow borderless").classes("grow")
-                    ui.button(icon="send", on_click=lambda: ask()).props("round unelevated") \
+                    send_button = ui.button(icon="send").props("round unelevated") \
                         .classes("send-button") \
                         .style("background: #f4f4f5 !important; color: #111318 !important;")
 
@@ -296,4 +296,31 @@ def configure_pages(settings: Settings) -> None:
                     else "Не удалось подготовить ответ. Попробуйте ещё раз чуть позже."
                 )
 
-        question.on("keydown.enter", lambda _: ask())
+        async def ask_from_browser(event: Any) -> None:
+            """Submit the value captured in the browser before clearing the textarea."""
+            message = event.args if isinstance(event.args, str) else ""
+            await ask(message)
+
+        clear_and_submit = """(value, input) => {
+            if (!value.trim()) return;
+            input.value = '';
+            input.dispatchEvent(new Event('input', {bubbles: true}));
+            emit(value);
+        }"""
+        question.on(
+            "keydown.enter",
+            ask_from_browser,
+            js_handler=f"""(event) => {{
+                if (event.shiftKey) return;
+                event.preventDefault();
+                ({clear_and_submit})(event.target.value, event.target);
+            }}""",
+        )
+        send_button.on(
+            "click",
+            ask_from_browser,
+            js_handler=f"""() => {{
+                const input = getHtmlElement({question.id})?.querySelector('textarea');
+                if (input) ({clear_and_submit})(input.value, input);
+            }}""",
+        )
