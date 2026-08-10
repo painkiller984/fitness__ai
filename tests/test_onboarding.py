@@ -42,3 +42,27 @@ def test_onboarding_context_uses_requested_language() -> None:
     stage = current_onboarding_stage({})
     assert stage is not None
     assert "introduce" in onboarding_context(stage, "en")["mandatory_instruction"]
+
+
+def test_workout_onboarding_collects_training_specific_facts() -> None:
+    stage = current_onboarding_stage(
+        {
+            "name": "Антон",
+            "age": 27,
+            "sex": "male",
+            "height_cm": 172,
+            "weight_kg": 94,
+            "goal": "weight_loss",
+            "activity_level": "moderate",
+        },
+        "workout",
+    )
+    assert stage is not None
+    assert stage.key == "workout_setup"
+    assert stage.missing_fields == (
+        "training_place",
+        "training_experience",
+        "training_days_per_week",
+        "equipment_screened",
+        "health_screened",
+    )

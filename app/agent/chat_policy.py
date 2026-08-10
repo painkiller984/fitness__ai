@@ -68,6 +68,10 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
         "weight_kg": "вес",
         "goal": "цель",
         "activity_level": "активность",
+        "training_place": "место тренировок",
+        "training_experience": "уровень подготовки",
+        "training_days_per_week": "тренировочных дней в неделю",
+        "available_equipment": "оборудование",
         "target_kcal": "калории",
         "protein_g": "белки",
         "fat_g": "жиры",
@@ -81,6 +85,10 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
         "weight_kg": "weight",
         "goal": "goal",
         "activity_level": "activity",
+        "training_place": "training place",
+        "training_experience": "training level",
+        "training_days_per_week": "training days per week",
+        "available_equipment": "equipment",
         "target_kcal": "calories",
         "protein_g": "protein",
         "fat_g": "fat",
@@ -107,6 +115,13 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
         "moderate": "умеренная",
         "high": "высокая",
         "very_high": "очень высокая",
+        "home": "дома",
+        "gym": "спортзал",
+        "both": "несколько мест",
+        "outdoors": "улица или парк",
+        "beginner": "новичок",
+        "intermediate": "средний",
+        "advanced": "продвинутый",
     }
     translations_en = {
         "male": "male",
@@ -120,11 +135,18 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
         "moderate": "moderate",
         "high": "high",
         "very_high": "very high",
+        "home": "home",
+        "gym": "gym",
+        "both": "multiple places",
+        "outdoors": "outdoors",
+        "beginner": "beginner",
+        "intermediate": "intermediate",
+        "advanced": "advanced",
     }
     labels = labels_en if language == "en" else labels_ru
     translations = translations_en if language == "en" else translations_ru
     values = [
-        f"{labels[key]} — {translations.get(str(profile[key]), profile[key])}{suffixes.get(key, '')}"
+        f"{labels[key]} — {(', '.join(item.replace('_', ' ') for item in profile[key]) if key == 'available_equipment' and isinstance(profile[key], list) else translations.get(str(profile[key]), profile[key]))}{suffixes.get(key, '')}"
         for key in labels
         if profile.get(key) not in (None, "", [])
     ]

@@ -94,9 +94,70 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
         facts["activity_level"] = "high"
     elif any(marker in text for marker in ("не тренир", "сидяч", "малоподвиж", "sedentary", "don't train", "do not train")):
         facts["activity_level"] = "sedentary"
+    if any(marker in text for marker in ("дома", "домашн", "home")):
+        facts["training_place"] = "home"
+    if any(marker in text for marker in ("зал", "gym")):
+        facts["training_place"] = "both" if facts.get("training_place") == "home" else "gym"
+    if any(marker in text for marker in ("улиц", "парк", "outdoor")):
+        facts["training_place"] = "both" if facts.get("training_place") else "outdoors"
+    if any(marker in text for marker in ("нович", "начинающ", "beginner", "никогда не тренир")):
+        facts["training_experience"] = "beginner"
+    elif any(marker in text for marker in ("продвин", "опытн", "advanced", "больше 3 лет", "более 3 лет")):
+        facts["training_experience"] = "advanced"
+    elif any(marker in text for marker in ("средн", "intermediate", "около года", "1 год", "2 года", "3 года")):
+        facts["training_experience"] = "intermediate"
+    days = re.search(
+        r"\b([1-7])\s*(?:раза?|дн(?:я|ей)|times?|days?)\s*(?:в|per|a)?\s*(?:недел|week)",
+        text,
+    )
+    if days:
+        facts["training_days_per_week"] = int(days.group(1))
+    equipment = _extract_equipment(text)
+    if equipment is not None:
+        facts["available_equipment"] = equipment
+        facts["equipment_screened"] = True
+    health = _extract_health_screening(message)
+    if health is not None:
+        facts.update(health)
     if expected_fields and {"age", "sex", "height_cm", "weight_kg"} & expected_fields:
         facts.update(_extract_expected_body_values(message, facts))
     return facts
+
+
+def _extract_equipment(text: str) -> list[str] | None:
+    if any(marker in text for marker in ("без оборудования", "ничего нет", "только свой вес", "no equipment", "bodyweight only")):
+        return []
+    markers = {
+        "dumbbells": ("гантел", "dumbbell"),
+        "barbell": ("штанг", "barbell"),
+        "resistance_bands": ("резин", "эспандер", "band"),
+        "pull_up_bar": ("турник", "pull-up bar", "pull up bar"),
+        "machines": ("тренаж", "machine"),
+        "bench": ("скам", "bench"),
+        "kettlebells": ("гиря", "гири", "kettlebell"),
+    }
+    found = [name for name, keywords in markers.items() if any(keyword in text for keyword in keywords)]
+    return found or None
+
+
+def _extract_health_screening(message: str) -> dict[str, Any] | None:
+    text = message.casefold()
+    if any(marker in text for marker in (
+        "травм нет", "нет травм", "ограничений нет", "ничего не болит", "проблем со здоровьем нет",
+        "no injuries", "no health issues",
+    )):
+        return {"health_screened": True, "injuries": [], "medical_notes": ""}
+    if any(marker in text for marker in (
+        "травм", "болит", "боль", "грыж", "давлен", "диабет", "астм", "беремен", "операц",
+        "injury", "pain", "condition", "pregnan",
+    )):
+        facts: dict[str, Any] = {"health_screened": True, "medical_notes": message.strip()[:1000]}
+        if any(marker in text for marker in ("травм", "болит", "боль", "injury", "pain")):
+            facts["injuries"] = [message.strip()[:300]]
+        if "беремен" in text or "pregnan" in text:
+            facts["is_pregnant"] = True
+        return facts
+    return None
 
 
 def _extract_expected_body_values(message: str, existing: dict[str, Any]) -> dict[str, Any]:

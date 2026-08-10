@@ -54,10 +54,37 @@ STAGES = (
 )
 
 
-def current_onboarding_stage(profile: dict[str, Any] | None) -> OnboardingStage | None:
+def current_onboarding_stage(
+    profile: dict[str, Any] | None, workflow: str | None = None
+) -> OnboardingStage | None:
     data = profile or {}
-    for stage in STAGES:
-        missing = tuple(field for field in stage.missing_fields if data.get(field) in (None, ""))
+    stages = list(STAGES)
+    if workflow == "workout":
+        stages.append(
+            OnboardingStage(
+                key="workout_setup",
+                missing_fields=(
+                    "training_place",
+                    "training_experience",
+                    "training_days_per_week",
+                    "equipment_screened",
+                    "health_screened",
+                ),
+                instruction_ru=(
+                    "Коротко отреагируй, но не составляй программу. Спроси только недостающие данные для "
+                    "безопасной тренировки: где заниматься (дом, зал, улица), уровень (новичок, средний, "
+                    "продвинутый), сколько дней в неделю, доступное оборудование и есть ли травмы, "
+                    "заболевания или другие ограничения. Не выдумывай эти данные."
+                ),
+                instruction_en=(
+                    "Respond briefly but do not create a program yet. Ask only for the missing workout details: "
+                    "place, experience level (beginner, intermediate, advanced), days per week, available "
+                    "equipment, and injuries, health conditions, or other limitations. Do not invent them."
+                ),
+            )
+        )
+    for stage in stages:
+        missing = tuple(field for field in stage.missing_fields if data.get(field) in (None, "", False))
         if missing:
             return OnboardingStage(
                 key=stage.key,

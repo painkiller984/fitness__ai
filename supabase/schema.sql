@@ -10,7 +10,12 @@ create table if not exists public.profiles (
     weight_kg numeric(6,1) not null check (weight_kg between 35 and 350),
     goal text not null check (goal in ('weight_loss', 'muscle_gain', 'maintenance', 'wellbeing')),
     activity_level text not null check (activity_level in ('sedentary', 'light', 'moderate', 'high', 'very_high')),
-    training_place text not null check (training_place in ('home', 'gym', 'both')),
+    training_place text check (training_place in ('home', 'gym', 'both', 'outdoors')),
+    training_experience text check (training_experience in ('beginner', 'intermediate', 'advanced')),
+    training_days_per_week integer check (training_days_per_week between 1 and 7),
+    available_equipment text[] not null default '{}',
+    equipment_screened boolean not null default false,
+    health_screened boolean not null default false,
     dietary_preferences text[] not null default '{}',
     allergies text[] not null default '{}',
     injuries text[] not null default '{}',
@@ -88,6 +93,14 @@ create table if not exists public.anonymous_profiles (
     weight_kg numeric(6,1) check (weight_kg between 35 and 350),
     goal text check (goal in ('weight_loss', 'muscle_gain', 'maintenance', 'wellbeing')),
     activity_level text check (activity_level in ('sedentary', 'light', 'moderate', 'high', 'very_high')),
+    training_place text check (training_place in ('home', 'gym', 'both', 'outdoors')),
+    training_experience text check (training_experience in ('beginner', 'intermediate', 'advanced')),
+    training_days_per_week integer check (training_days_per_week between 1 and 7),
+    available_equipment text[] not null default '{}',
+    equipment_screened boolean not null default false,
+    health_screened boolean not null default false,
+    medical_notes text not null default '',
+    is_pregnant boolean not null default false,
     dietary_preferences text[] not null default '{}',
     allergies text[] not null default '{}',
     injuries text[] not null default '{}',
@@ -103,7 +116,29 @@ create table if not exists public.anonymous_profiles (
 );
 
 alter table public.anonymous_profiles enable row level security;
+alter table public.profiles alter column training_place drop not null;
+alter table public.profiles drop constraint if exists profiles_training_place_check;
+alter table public.profiles add constraint profiles_training_place_check
+    check (training_place in ('home', 'gym', 'both', 'outdoors'));
+alter table public.profiles add column if not exists training_experience text
+    check (training_experience in ('beginner', 'intermediate', 'advanced'));
+alter table public.profiles add column if not exists training_days_per_week integer
+    check (training_days_per_week between 1 and 7);
+alter table public.profiles add column if not exists available_equipment text[] not null default '{}';
+alter table public.profiles add column if not exists equipment_screened boolean not null default false;
+alter table public.profiles add column if not exists health_screened boolean not null default false;
 alter table public.anonymous_profiles add column if not exists deletion_requested_at timestamptz;
+alter table public.anonymous_profiles add column if not exists training_place text
+    check (training_place in ('home', 'gym', 'both', 'outdoors'));
+alter table public.anonymous_profiles add column if not exists training_experience text
+    check (training_experience in ('beginner', 'intermediate', 'advanced'));
+alter table public.anonymous_profiles add column if not exists training_days_per_week integer
+    check (training_days_per_week between 1 and 7);
+alter table public.anonymous_profiles add column if not exists available_equipment text[] not null default '{}';
+alter table public.anonymous_profiles add column if not exists equipment_screened boolean not null default false;
+alter table public.anonymous_profiles add column if not exists health_screened boolean not null default false;
+alter table public.anonymous_profiles add column if not exists medical_notes text not null default '';
+alter table public.anonymous_profiles add column if not exists is_pregnant boolean not null default false;
 revoke all on public.anonymous_profiles from anon;
 grant select, insert, update, delete on public.anonymous_profiles to authenticated;
 

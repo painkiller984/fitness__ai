@@ -21,6 +21,7 @@ def test_extracts_natural_activity_description() -> None:
     assert extract_profile_facts("Я мужчина и тренируюсь 3 раза в неделю") == {
         "sex": "male",
         "activity_level": "moderate",
+        "training_days_per_week": 3,
     }
 
 
@@ -57,6 +58,7 @@ def test_extracts_english_profile_facts() -> None:
         "sex": "male",
         "goal": "weight_loss",
         "activity_level": "moderate",
+        "training_days_per_week": 3,
     }
 
 
@@ -72,6 +74,7 @@ def test_extracts_compact_unlabelled_profile_summary() -> None:
         "weight_kg": 93.0,
         "goal": "weight_loss",
         "activity_level": "moderate",
+        "training_days_per_week": 3,
     }
 
 
@@ -92,4 +95,17 @@ def test_compact_parser_does_not_store_goal_as_name() -> None:
         "weight_kg": 94.0,
         "goal": "weight_loss",
         "activity_level": "moderate",
+        "training_days_per_week": 3,
     }
+
+
+def test_extracts_workout_setup_and_health_screening() -> None:
+    facts = extract_profile_facts(
+        "Я новичок, тренируюсь дома 3 раза в неделю, есть гантели и резинки. Травм нет"
+    )
+    assert facts["training_experience"] == "beginner"
+    assert facts["training_place"] == "home"
+    assert facts["training_days_per_week"] == 3
+    assert facts["available_equipment"] == ["dumbbells", "resistance_bands"]
+    assert facts["equipment_screened"] is True
+    assert facts["health_screened"] is True

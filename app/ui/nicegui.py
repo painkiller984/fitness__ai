@@ -28,6 +28,7 @@ from app.providers.factory import create_provider_bundle
 from app.repositories.local_memory import LocalProfileStore
 from app.repositories.supabase import SupabaseError, SupabaseGateway
 from app.tools.calorie_macros import calculate_nutrition_targets
+from app.tools.workout_program import build_workout_program
 
 
 def configure_pages(settings: Settings) -> None:
@@ -82,6 +83,7 @@ def configure_pages(settings: Settings) -> None:
             "memory": ConversationMemory(),
             "profile": None,
             "pending_facts": {},
+            "active_workflow": None,
             "token": None,
             "user_id": None,
         }
@@ -217,6 +219,11 @@ def configure_pages(settings: Settings) -> None:
             try:
                 normalized = message.casefold().strip()
                 language = response_language(message)
+                intent = route_intent(message)
+                if intent == "workout_plan":
+                    state["active_workflow"] = "workout"
+                elif intent in {"nutrition_targets", "meal_plan"}:
+                    state["active_workflow"] = None
                 delete_commands = {"удали мои данные", "удалить мои данные", "delete my data"}
                 show_commands = {"покажи мои данные", "показать мои данные", "show my data"}
                 if normalized in delete_commands and gateway and state["token"]:
@@ -264,7 +271,7 @@ def configure_pages(settings: Settings) -> None:
                     **public_profile_context(state["profile"]),
                     **state["pending_facts"],
                 }
-                expected_stage = current_onboarding_stage(known_profile)
+                expected_stage = current_onboarding_stage(known_profile, state["active_workflow"])
                 expected_fields = set(expected_stage.missing_fields) if expected_stage else set()
                 facts = extract_profile_facts(message, expected_fields)
                 combined_facts = {**state["pending_facts"], **facts}
@@ -298,7 +305,7 @@ def configure_pages(settings: Settings) -> None:
                         **state["pending_facts"],
                     }.items()
                 }
-                onboarding_stage = current_onboarding_stage(profile_context)
+                onboarding_stage = current_onboarding_stage(profile_context, state["active_workflow"])
                 if onboarding_stage:
                     profile_context["_onboarding"] = onboarding_context(onboarding_stage, language)
                 urgent_reply = urgent_message_if_needed(message)
@@ -314,9 +321,13 @@ def configure_pages(settings: Settings) -> None:
                         else:
                             state["profile"] = local_profiles.save(state["user_id"], updates)
                         profile_context.update(updates)
-                intent = route_intent(message)
                 if urgent_reply:
                     reply = urgent_reply
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
+                elif state["active_workflow"] == "workout" and onboarding_stage is None and complete_profile:
+                    reply = build_workout_program(profile_context, language)
+                    state["active_workflow"] = None
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 elif should_use_bounded_agent(intent, complete_profile):
