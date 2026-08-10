@@ -80,8 +80,21 @@ def format_profile_data(profile: dict[str, Any] | None) -> str:
         "fat_g": " г",
         "carbs_g": " г",
     }
+    translations = {
+        "male": "мужской",
+        "female": "женский",
+        "weight_loss": "снижение веса",
+        "muscle_gain": "набор мышечной массы",
+        "maintenance": "поддержание формы",
+        "wellbeing": "улучшение самочувствия",
+        "sedentary": "низкая",
+        "light": "лёгкая",
+        "moderate": "умеренная",
+        "high": "высокая",
+        "very_high": "очень высокая",
+    }
     values = [
-        f"{labels[key]} — {profile[key]}{suffixes.get(key, '')}"
+        f"{labels[key]} — {translations.get(str(profile[key]), profile[key])}{suffixes.get(key, '')}"
         for key in labels
         if profile.get(key) not in (None, "", [])
     ]

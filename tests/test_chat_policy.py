@@ -49,3 +49,12 @@ def test_targets_are_persistable_and_visible() -> None:
 def test_internal_identifiers_are_not_displayed() -> None:
     text = format_profile_data({**COMPLETE, "user_id": "secret-id"})
     assert "secret-id" not in text
+
+
+def test_internal_profile_values_are_displayed_in_russian() -> None:
+    text = format_profile_data(COMPLETE)
+    assert "пол — мужской" in text
+    assert "цель — снижение веса" in text
+    assert "активность — умеренная" in text
+    assert "male" not in text
+    assert "weight_loss" not in text
