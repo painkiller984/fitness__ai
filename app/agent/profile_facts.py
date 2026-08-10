@@ -127,6 +127,27 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
 def _extract_equipment(text: str) -> list[str] | None:
     if any(marker in text for marker in ("без оборудования", "ничего нет", "только свой вес", "no equipment", "bodyweight only")):
         return []
+    if any(
+        marker in text
+        for marker in (
+            "не знаю какое оборудование",
+            "не знаю, какое оборудование",
+            "не знаю оборудования",
+            "не знаю что есть",
+            "не уверен какое оборудование",
+            "наверное все доступно",
+            "всё доступно",
+            "все доступно",
+            "полный доступ",
+            "стандартный зал",
+            "обычный зал",
+            "standard gym",
+            "everything is available",
+            "full gym access",
+            "not sure what equipment",
+        )
+    ):
+        return ["barbell", "dumbbells", "machines", "bench", "pull_up_bar"]
     markers = {
         "dumbbells": ("гантел", "dumbbell"),
         "barbell": ("штанг", "barbell"),

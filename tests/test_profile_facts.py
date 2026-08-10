@@ -109,3 +109,14 @@ def test_extracts_workout_setup_and_health_screening() -> None:
     assert facts["available_equipment"] == ["dumbbells", "resistance_bands"]
     assert facts["equipment_screened"] is True
     assert facts["health_screened"] is True
+
+
+def test_unknown_or_full_gym_equipment_counts_as_answer() -> None:
+    unknown = extract_profile_facts("Нет травм, не знаю какое оборудование")
+    full_access = extract_profile_facts("Наверное всё доступно")
+
+    assert unknown["available_equipment"]
+    assert unknown["equipment_screened"] is True
+    assert unknown["health_screened"] is True
+    assert full_access["available_equipment"]
+    assert full_access["equipment_screened"] is True
