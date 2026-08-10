@@ -190,7 +190,8 @@ def configure_pages(settings: Settings) -> None:
             message = (text if text is not None else question.value).strip()
             if not message:
                 return
-            question.value = ""
+            question.set_value("")
+            question.update()
             add_bubble(message, sent=True)
             typing = add_typing()
             try:

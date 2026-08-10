@@ -23,6 +23,7 @@ def extract_profile_facts(message: str) -> dict[str, Any]:
     """Extract only explicitly stated, durable profile facts from a user message."""
     text = message.casefold()
     facts: dict[str, Any] = {}
+    facts.update(_extract_compact_profile(message))
     name = re.search(
         r"(?:меня зовут|мо[её] имя|my name is)\s+([а-яёa-z][а-яёa-z-]{1,79})\b",
         message,
@@ -71,3 +72,50 @@ def extract_profile_facts(message: str) -> dict[str, Any]:
     elif any(marker in text for marker in ("не тренир", "сидяч", "малоподвиж", "sedentary", "don't train", "do not train")):
         facts["activity_level"] = "sedentary"
     return facts
+
+
+def _extract_compact_profile(message: str) -> dict[str, Any]:
+    """Recognize a natural ordered summary such as: Anton, 27, male, 172, 93, weight loss."""
+    parts = [part.strip() for part in message.split(",") if part.strip()]
+    if len(parts) < 5:
+        return {}
+    joined = " ".join(parts).casefold()
+    has_sex = bool(
+        re.search(r"\b(?:male|female|man|woman)\b", joined)
+        or any(marker in joined for marker in ("мужск", "мужчина", "женск", "женщина"))
+    )
+    has_goal = any(
+        marker in joined
+        for marker in (
+            "похуд",
+            "снижение веса",
+            "набрать мышцы",
+            "набор массы",
+            "поддерж",
+            "lose weight",
+            "weight loss",
+            "gain muscle",
+            "muscle gain",
+            "maintain",
+        )
+    )
+    name_match = re.fullmatch(r"[а-яёa-z][а-яёa-z-]{1,79}", parts[0], re.I)
+    if not (name_match and has_sex and has_goal):
+        return {}
+
+    result: dict[str, Any] = {"name": parts[0].capitalize()}
+    numeric_parts: list[float] = []
+    for part in parts[1:]:
+        match = re.fullmatch(r"(\d{2,3}(?:[.,]\d+)?)\s*(?:лет|года|год|см|кг|years?|cm|kg)?", part, re.I)
+        if match:
+            numeric_parts.append(float(match.group(1).replace(",", ".")))
+
+    if numeric_parts and 14 <= numeric_parts[0] <= 100:
+        result["age"] = int(numeric_parts.pop(0))
+    height_index = next((i for i, value in enumerate(numeric_parts) if 120 <= value <= 230), None)
+    if height_index is not None:
+        result["height_cm"] = int(numeric_parts.pop(height_index))
+    weight_index = next((i for i, value in enumerate(numeric_parts) if 35 <= value <= 350), None)
+    if weight_index is not None:
+        result["weight_kg"] = numeric_parts[weight_index]
+    return result

@@ -48,3 +48,22 @@ def test_extracts_english_profile_facts() -> None:
         "goal": "weight_loss",
         "activity_level": "moderate",
     }
+
+
+def test_extracts_compact_unlabelled_profile_summary() -> None:
+    facts = extract_profile_facts(
+        "Антон, 27, мужской, 172, 93, похудение, тренируюсь 3 раза в неделю"
+    )
+    assert facts == {
+        "name": "Антон",
+        "age": 27,
+        "sex": "male",
+        "height_cm": 172,
+        "weight_kg": 93.0,
+        "goal": "weight_loss",
+        "activity_level": "moderate",
+    }
+
+
+def test_compact_parser_does_not_guess_without_profile_context() -> None:
+    assert extract_profile_facts("Антон, 27, привет, 172, 93") == {}
