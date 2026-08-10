@@ -221,9 +221,9 @@ def configure_pages(settings: Settings) -> None:
                 language = response_language(message)
                 intent = route_intent(message)
                 if intent == "workout_plan":
-                    state["active_workflow"] = "workout"
+                    state["active_workflow"] = "workout_plan"
                 elif intent in {"nutrition_targets", "meal_plan"}:
-                    state["active_workflow"] = None
+                    state["active_workflow"] = intent
                 delete_commands = {"удали мои данные", "удалить мои данные", "delete my data"}
                 show_commands = {"покажи мои данные", "показать мои данные", "show my data"}
                 if normalized in delete_commands and gateway and state["token"]:
@@ -244,6 +244,7 @@ def configure_pages(settings: Settings) -> None:
                     state["profile"] = None
                     state["memory"] = ConversationMemory()
                     state["pending_facts"] = {}
+                    state["active_workflow"] = None
                     typing.delete()
                     add_bubble(
                         "Your data has been cleared and queued for permanent deletion. You can start again by telling me about yourself."
@@ -256,6 +257,7 @@ def configure_pages(settings: Settings) -> None:
                     state["profile"] = None
                     state["memory"] = ConversationMemory()
                     state["pending_facts"] = {}
+                    state["active_workflow"] = None
                     typing.delete()
                     add_bubble(
                         "Your local profile has been deleted. You can start again by telling me about yourself."
@@ -325,19 +327,22 @@ def configure_pages(settings: Settings) -> None:
                     reply = urgent_reply
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
-                elif state["active_workflow"] == "workout" and onboarding_stage is None:
+                elif state["active_workflow"] == "workout_plan" and onboarding_stage is None:
                     reply = build_workout_program(profile_context, language)
                     state["active_workflow"] = None
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
-                elif should_use_bounded_agent(intent, complete_profile):
-                    reply = (await bounded_agent.respond(complete_profile, message, state["memory"])).message
                 else:
-                    reply = await provider.conversation.respond(
-                        message, state["memory"].recent(), profile_context
-                    )
-                    state["memory"].add("user", message)
-                    state["memory"].add("assistant", reply)
+                    workflow_intent = state["active_workflow"] or intent
+                    if should_use_bounded_agent(workflow_intent, complete_profile):
+                        reply = (await bounded_agent.respond(complete_profile, message, state["memory"])).message
+                        state["active_workflow"] = None
+                    else:
+                        reply = await provider.conversation.respond(
+                            message, state["memory"].recent(), profile_context
+                        )
+                        state["memory"].add("user", message)
+                        state["memory"].add("assistant", reply)
                 typing.delete()
                 add_bubble(reply)
             except Exception:

@@ -42,6 +42,7 @@ class TrainingExperience(StrEnum):
 class UserProfile(BaseModel):
     user_id: UUID | None = None
     name: str = Field(min_length=1, max_length=80)
+    surname: str | None = Field(default=None, min_length=1, max_length=80)
     age: int = Field(ge=14, le=100)
     sex: Sex
     height_cm: float = Field(ge=120, le=230)

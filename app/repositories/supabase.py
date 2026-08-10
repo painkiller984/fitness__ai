@@ -105,6 +105,7 @@ class SupabaseGateway:
         headers["Prefer"] = "return=minimal"
         payload = {
             "name": None,
+            "surname": None,
             "age": None,
             "sex": None,
             "height_cm": None,

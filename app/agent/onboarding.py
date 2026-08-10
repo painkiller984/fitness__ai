@@ -18,11 +18,11 @@ STAGES = (
         missing_fields=("name",),
         instruction_ru=(
             "Коротко и естественно отреагируй на сообщение, но не переходи к рекомендациям или следующим "
-            "вопросам. В конце обязательно попроси пользователя представиться."
+            "вопросам. В конце обязательно попроси пользователя назвать имя; фамилию можно указать по желанию."
         ),
         instruction_en=(
             "React briefly and naturally to the message, but do not proceed to recommendations or later "
-            "questions. End by asking the user to introduce themselves."
+            "questions. End by asking for the user's first name; their surname is optional."
         ),
     ),
     OnboardingStage(
@@ -59,7 +59,7 @@ def current_onboarding_stage(
 ) -> OnboardingStage | None:
     data = profile or {}
     stages = list(STAGES)
-    if workflow == "workout":
+    if workflow == "workout_plan":
         stages = [
             STAGES[0],
             STAGES[1],

@@ -4,6 +4,7 @@
 create table if not exists public.profiles (
     user_id uuid primary key references auth.users(id) on delete cascade,
     name text not null check (char_length(name) between 1 and 80),
+    surname text check (char_length(surname) between 1 and 80),
     age integer not null check (age between 14 and 100),
     sex text not null check (sex in ('female', 'male')),
     height_cm numeric(5,1) not null check (height_cm between 120 and 230),
@@ -87,6 +88,7 @@ with check ((select auth.uid()) = user_id);
 create table if not exists public.anonymous_profiles (
     user_id uuid primary key references auth.users(id) on delete cascade,
     name text check (char_length(name) between 1 and 80),
+    surname text check (char_length(surname) between 1 and 80),
     age integer check (age between 14 and 100),
     sex text check (sex in ('female', 'male')),
     height_cm numeric(5,1) check (height_cm between 120 and 230),
@@ -128,6 +130,8 @@ alter table public.profiles add column if not exists available_equipment text[] 
 alter table public.profiles add column if not exists equipment_screened boolean not null default false;
 alter table public.profiles add column if not exists health_screened boolean not null default false;
 alter table public.anonymous_profiles add column if not exists deletion_requested_at timestamptz;
+alter table public.profiles add column if not exists surname text check (char_length(surname) between 1 and 80);
+alter table public.anonymous_profiles add column if not exists surname text check (char_length(surname) between 1 and 80);
 alter table public.anonymous_profiles add column if not exists training_place text
     check (training_place in ('home', 'gym', 'both', 'outdoors'));
 alter table public.anonymous_profiles add column if not exists training_experience text

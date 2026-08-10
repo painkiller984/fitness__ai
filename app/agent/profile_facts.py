@@ -44,6 +44,11 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
     text = message.casefold()
     facts: dict[str, Any] = {}
     facts.update(_extract_compact_profile(message))
+    full_name = re.search(
+        r"(?:меня зовут|мо[её] имя|my name is)\s+([а-яёa-z][а-яёa-z-]{1,79})(?:\s+([а-яёa-z][а-яёa-z-]{1,79}))?(?=\s*(?:[,;.!?]|$))",
+        message,
+        re.I,
+    )
     name = re.search(
         r"(?:меня зовут|мо[её] имя|my name is)\s+([а-яёa-z][а-яёa-z-]{1,79})\b",
         message,
@@ -54,8 +59,12 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
         message,
         re.I,
     )
+    if full_name and is_valid_profile_name(full_name.group(1)):
+        facts["name"] = full_name.group(1).capitalize()
+        if full_name.group(2) and is_valid_profile_name(full_name.group(2)):
+            facts["surname"] = full_name.group(2).capitalize()
     name = name or short_name
-    if name and is_valid_profile_name(name.group(1)):
+    if "name" not in facts and name and is_valid_profile_name(name.group(1)):
         facts["name"] = name.group(1).capitalize()
     elif expected_fields and "name" in expected_fields and is_valid_profile_name(message.strip()):
         facts["name"] = message.strip().capitalize()

@@ -99,6 +99,13 @@ def test_compact_parser_does_not_store_goal_as_name() -> None:
     }
 
 
+def test_extracts_optional_surname_only_when_explicitly_given() -> None:
+    facts = extract_profile_facts("Меня зовут Антон Иванов, мне 30 лет")
+
+    assert facts["name"] == "Антон"
+    assert facts["surname"] == "Иванов"
+
+
 def test_extracts_workout_setup_and_health_screening() -> None:
     facts = extract_profile_facts(
         "Я новичок, тренируюсь дома 3 раза в неделю, есть гантели и резинки. Травм нет"

@@ -62,6 +62,7 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
         return "Пока у меня нет сохранённых данных о вас. Расскажите имя, возраст, пол, рост, вес, цель и активность."
     labels_ru = {
         "name": "имя",
+        "surname": "фамилия",
         "age": "возраст",
         "sex": "пол",
         "height_cm": "рост",
@@ -79,6 +80,7 @@ def format_profile_data(profile: dict[str, Any] | None, language: str = "ru") ->
     }
     labels_en = {
         "name": "name",
+        "surname": "surname",
         "age": "age",
         "sex": "sex",
         "height_cm": "height",

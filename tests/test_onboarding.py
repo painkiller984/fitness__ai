@@ -41,7 +41,7 @@ def test_onboarding_is_complete_after_required_profile() -> None:
 def test_onboarding_context_uses_requested_language() -> None:
     stage = current_onboarding_stage({})
     assert stage is not None
-    assert "introduce" in onboarding_context(stage, "en")["mandatory_instruction"]
+    assert "first name" in onboarding_context(stage, "en")["mandatory_instruction"]
 
 
 def test_workout_onboarding_collects_training_specific_facts() -> None:
@@ -55,7 +55,7 @@ def test_workout_onboarding_collects_training_specific_facts() -> None:
             "goal": "weight_loss",
             "activity_level": "moderate",
         },
-        "workout",
+        "workout_plan",
     )
     assert stage is not None
     assert stage.key == "workout_setup"
@@ -76,7 +76,7 @@ def test_workout_onboarding_does_not_require_activity_level() -> None:
             "weight_kg": 94,
             "goal": "weight_loss",
         },
-        "workout",
+        "workout_plan",
     )
 
     assert stage is not None
