@@ -75,4 +75,11 @@ def test_compact_parser_does_not_store_goal_as_name() -> None:
     )
 
     assert "name" not in facts
-    assert facts["goal"] == "weight_loss"
+    assert facts == {
+        "age": 27,
+        "sex": "male",
+        "height_cm": 172,
+        "weight_kg": 94.0,
+        "goal": "weight_loss",
+        "activity_level": "moderate",
+    }

@@ -115,10 +115,12 @@ def _extract_compact_profile(message: str) -> dict[str, Any]:
             "maintain",
         )
     )
-    if not (is_valid_profile_name(parts[0]) and has_sex and has_goal):
+    if not (has_sex and has_goal):
         return {}
 
-    result: dict[str, Any] = {"name": parts[0].capitalize()}
+    result: dict[str, Any] = {}
+    if is_valid_profile_name(parts[0]):
+        result["name"] = parts[0].capitalize()
     numeric_parts: list[float] = []
     for part in parts[1:]:
         match = re.fullmatch(r"(\d{2,3}(?:[.,]\d+)?)\s*(?:лет|года|год|см|кг|years?|cm|kg)?", part, re.I)
