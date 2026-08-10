@@ -5,7 +5,8 @@ def route_intent(message: str) -> str:
     """Deterministic intent router for the known fitness workflows."""
     text = message.casefold()
     routes = (
-        ("meal_plan", ("меню", "питан", "блюд", "продукт")),
+        ("meal_adjustment", ("зефир", "маршмеллоу", "marshmallow", "zephyr")),
+        ("meal_plan", ("меню", "рацион", "питан", "блюд", "продукт")),
         ("workout_plan", ("трениров", "упражнен", "подход", "повтор")),
         ("progress", ("вес", "объём", "прогресс", "сон")),
         ("nutrition_targets", ("калори", "бжу", "белк", "жир", "углевод")),

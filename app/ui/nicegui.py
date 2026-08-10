@@ -28,6 +28,7 @@ from app.providers.factory import create_provider_bundle
 from app.repositories.local_memory import LocalProfileStore
 from app.repositories.supabase import SupabaseError, SupabaseGateway
 from app.tools.calorie_macros import calculate_nutrition_targets
+from app.tools.menu_templates import build_daily_menu
 from app.tools.workout_program import build_workout_program
 
 
@@ -162,6 +163,7 @@ def configure_pages(settings: Settings) -> None:
                     "Рассчитать калории",
                     "Составить тренировку",
                     "Подобрать меню",
+                    "Добавить зефир 30 г",
                     "Покажи мои данные",
                     "Удалить мои данные",
                 )
@@ -224,6 +226,8 @@ def configure_pages(settings: Settings) -> None:
                     state["active_workflow"] = "workout_plan"
                 elif intent in {"nutrition_targets", "meal_plan"}:
                     state["active_workflow"] = intent
+                elif intent == "meal_adjustment":
+                    state["active_workflow"] = "meal_plan"
                 delete_commands = {"удали мои данные", "удалить мои данные", "delete my data"}
                 show_commands = {"покажи мои данные", "показать мои данные", "show my data"}
                 if normalized in delete_commands and gateway and state["token"]:
@@ -334,7 +338,19 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"].add("assistant", reply)
                 else:
                     workflow_intent = state["active_workflow"] or intent
-                    if should_use_bounded_agent(workflow_intent, complete_profile):
+                    if workflow_intent == "meal_plan" and complete_profile:
+                        reply = build_daily_menu(
+                            calculate_nutrition_targets(complete_profile),
+                            include_zephyr=(
+                                (intent == "meal_adjustment" or "зефир" in normalized or "zephyr" in normalized)
+                                and not any(phrase in normalized for phrase in ("без зефира", "без зефир", "without zephyr"))
+                            ),
+                            language=language,
+                        )
+                        state["active_workflow"] = None
+                        state["memory"].add("user", message)
+                        state["memory"].add("assistant", reply)
+                    elif should_use_bounded_agent(workflow_intent, complete_profile):
                         reply = (await bounded_agent.respond(complete_profile, message, state["memory"])).message
                         state["active_workflow"] = None
                     else:

@@ -11,6 +11,7 @@ from app.providers.deterministic import DeterministicGenerator
 
 def test_router():
     assert route_intent("Составь меню на день") == "meal_plan"
+    assert route_intent("Добавить зефир 30 г") == "meal_adjustment"
     assert route_intent("Какие упражнения делать дома?") == "workout_plan"
 
 
