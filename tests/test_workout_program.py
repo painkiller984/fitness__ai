@@ -56,3 +56,11 @@ def test_female_default_and_explicit_focus_change_the_accent() -> None:
     upper = build_workout_program(profile(sex="female", muscle_focus="верх тела"))
     assert "Акцент: ноги и ягодицы" in female
     assert "Акцент: верх тела" in upper
+
+
+def test_beginner_order_uses_sex_specific_default_focus() -> None:
+    male = build_workout_program(profile(sex="male"))
+    female = build_workout_program(profile(sex="female"))
+
+    assert male.index("жим лёжа") < male.index("присед")
+    assert female.index("ягодичный мост") < female.index("присед")

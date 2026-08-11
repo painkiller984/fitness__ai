@@ -45,14 +45,15 @@ def build_workout_program(profile: dict[str, Any], language: str = "ru") -> str:
     health_note = _health_note(profile)
     schedule = "2 тренировки" if days == 2 else f"{days} тренировки"
 
+    default_focus = "верх тела" if sex == "male" else "ноги и ягодицы"
+    effective_focus = focus or default_focus
     if level == "beginner":
-        body = _full_body(library, days, goal, focus)
+        body = _full_body(library, days, goal, effective_focus)
         heading = "Новичок: full-body, первые 4 недели"
     else:
-        body = _split(library, days, level, goal, focus)
+        body = _split(library, days, level, goal, effective_focus)
         heading = "Опытный: сплит" if level == "intermediate" else "Продвинутый: сплит с прогрессией"
-    default_focus = "верх тела" if sex == "male" else "ноги и ягодицы"
-    focus_line = f"Акцент: {focus or default_focus}."
+    focus_line = f"Акцент: {effective_focus}."
     progression = _progression(level, goal)
     return "\n\n".join([
         f"**{heading}** — {schedule} в неделю, место: {'дом' if place == 'home' else 'зал'}.",
@@ -68,9 +69,9 @@ def _full_body(library: dict[str, str], days: int, goal: str, focus: str | None)
     sets = "2" if goal == "weight_loss" else "3"
     base = [library["squat"], library["push"], library["pull"], library["hinge"], library["shoulders"]]
     if focus == "ноги и ягодицы":
-        base.insert(2, library["glutes"])
-    if focus == "верх тела":
-        base.extend([library["push"], library["pull"]])
+        base = [library["glutes"], library["squat"], library["hinge"], library["push"], library["pull"], library["shoulders"]]
+    elif focus == "верх тела":
+        base = [library["push"], library["pull"], library["shoulders"], library["squat"], library["hinge"], library["push"]]
     return "**Тренировка A/B:**\n" + "\n".join(
         f"{index}. {exercise} — {sets} × 8–12." for index, exercise in enumerate(base[:6], 1)
     ) + ("\nЧередуй A/B; при 3 днях: A/B/A, затем B/A/B." if days >= 3 else "\nЧередуй A и B.")

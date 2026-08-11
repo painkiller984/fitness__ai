@@ -1,4 +1,4 @@
-from app.agent.onboarding import current_onboarding_stage, onboarding_context
+from app.agent.onboarding import current_onboarding_stage, onboarding_context, onboarding_reply
 
 
 def test_onboarding_requires_name_first() -> None:
@@ -42,6 +42,25 @@ def test_onboarding_context_uses_requested_language() -> None:
     stage = current_onboarding_stage({})
     assert stage is not None
     assert "first name" in onboarding_context(stage, "en")["mandatory_instruction"]
+
+
+def test_workout_onboarding_reply_mentions_experience_and_health() -> None:
+    stage = current_onboarding_stage(
+        {
+            "name": "Антон",
+            "age": 27,
+            "sex": "male",
+            "height_cm": 178,
+            "weight_kg": 80,
+            "goal": "maintenance",
+        },
+        "workout_plan",
+    )
+
+    assert stage is not None
+    reply = onboarding_reply(stage, "ru")
+    assert "опыт" in reply
+    assert "травмы" in reply
 
 
 def test_workout_onboarding_collects_training_specific_facts() -> None:

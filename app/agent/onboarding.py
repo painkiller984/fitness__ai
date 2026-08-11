@@ -121,3 +121,41 @@ def onboarding_context(stage: OnboardingStage, language: str) -> dict[str, Any]:
         "missing_fields": list(stage.missing_fields),
         "mandatory_instruction": stage.instruction_en if language == "en" else stage.instruction_ru,
     }
+
+
+def onboarding_reply(stage: OnboardingStage, language: str) -> str:
+    """Return a deterministic next question so an LLM cannot skip required facts."""
+    if language == "en":
+        return _onboarding_reply_en(stage)
+    return _onboarding_reply_ru(stage)
+
+
+def _onboarding_reply_ru(stage: OnboardingStage) -> str:
+    questions = {
+        "name": "Понял. Перед персональными рекомендациями назови, пожалуйста, своё имя.",
+        "body": "Чтобы продолжить, напиши недостающие данные одной фразой: возраст, пол, рост и текущий вес.",
+        "goal_activity": "Уточни, пожалуйста, цель и обычный уровень активности.",
+        "goal": "Уточни цель: похудение, набор мышечной массы, поддержание формы или улучшение самочувствия.",
+        "workout_setup": (
+            "Чтобы составить безопасную индивидуальную программу, уточни только недостающие пункты: "
+            "где будешь заниматься (дом или зал), какой у тебя опыт (до месяца, от месяца до года "
+            "или больше года) и есть ли травмы, заболевания либо ограничения. "
+            "Если ограничений нет — так и напиши."
+        ),
+    }
+    return questions.get(stage.key, "Уточни, пожалуйста, недостающие данные.")
+
+
+def _onboarding_reply_en(stage: OnboardingStage) -> str:
+    questions = {
+        "name": "Before personal recommendations, please tell me your first name.",
+        "body": "To continue, send the missing details in one sentence: age, sex, height, and current weight.",
+        "goal_activity": "Please clarify your goal and usual activity level.",
+        "goal": "Please clarify your goal: weight loss, muscle gain, maintenance, or wellbeing.",
+        "workout_setup": (
+            "Before I build a safe individual program, tell me only what is still missing: "
+            "where you will train (home or gym), your experience (under one month, one month to one year, "
+            "or over one year), and any injuries, conditions, or limitations. Say 'none' if there are none."
+        ),
+    }
+    return questions.get(stage.key, "Please clarify the missing details.")

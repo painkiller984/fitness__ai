@@ -18,7 +18,7 @@ from app.agent.chat_policy import (
     target_facts,
 )
 from app.agent.orchestrator import FitnessAgent
-from app.agent.onboarding import current_onboarding_stage, onboarding_context
+from app.agent.onboarding import current_onboarding_stage, onboarding_context, onboarding_reply
 from app.agent.profile_facts import extract_durable_dietary_preferences, extract_profile_facts, is_valid_profile_name
 from app.agent.router import route_intent
 from app.config import Settings
@@ -366,6 +366,10 @@ def configure_pages(settings: Settings) -> None:
                         profile_context.update(updates)
                 if urgent_reply:
                     reply = urgent_reply
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
+                elif onboarding_stage:
+                    reply = onboarding_reply(onboarding_stage, language)
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 elif state["active_workflow"] == "workout_plan" and onboarding_stage is None:
