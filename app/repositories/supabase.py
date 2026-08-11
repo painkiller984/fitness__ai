@@ -149,6 +149,21 @@ class SupabaseGateway:
         rows = self._unwrap(response)
         return rows[0] if rows else None
 
+    async def save_plan(
+        self, access_token: str, user_id: str, kind: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Persist a generated plan under the anonymous Auth user's RLS identity."""
+        headers = self._headers(access_token)
+        headers["Prefer"] = "return=representation"
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                f"{self.url}/rest/v1/plans",
+                headers=headers,
+                json={"user_id": user_id, "kind": kind, "payload": payload},
+            )
+        rows = self._unwrap(response)
+        return rows[0]
+
     async def get_profile(self, access_token: str, user_id: str) -> UserProfile | None:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.get(

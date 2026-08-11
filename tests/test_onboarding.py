@@ -9,7 +9,9 @@ def test_onboarding_requires_name_first() -> None:
 
 
 def test_onboarding_requests_only_missing_body_values() -> None:
-    stage = current_onboarding_stage({"name": "Антон", "age": 27, "sex": "male"})
+    stage = current_onboarding_stage(
+        {"name": "Антон", "age": 27, "sex": "male"}, "nutrition_targets"
+    )
     assert stage is not None
     assert stage.key == "body"
     assert stage.missing_fields == ("height_cm", "weight_kg")
@@ -17,7 +19,8 @@ def test_onboarding_requests_only_missing_body_values() -> None:
 
 def test_onboarding_moves_to_goal_and_activity() -> None:
     stage = current_onboarding_stage(
-        {"name": "Антон", "age": 27, "sex": "male", "height_cm": 172, "weight_kg": 94}
+        {"name": "Антон", "age": 27, "sex": "male", "height_cm": 172, "weight_kg": 94},
+        "nutrition_targets",
     )
     assert stage is not None
     assert stage.key == "goal_activity"
@@ -33,7 +36,8 @@ def test_onboarding_is_complete_after_required_profile() -> None:
             "weight_kg": 94,
             "goal": "weight_loss",
             "activity_level": "moderate",
-        }
+        },
+        "nutrition_targets",
     )
     assert stage is None
 
@@ -70,6 +74,18 @@ def test_workout_onboarding_reply_mentions_experience_and_health() -> None:
     reply = onboarding_reply(stage, "ru")
     assert "опыт" in reply
     assert "травмы" in reply
+
+
+def test_name_only_profile_waits_for_workflow_choice() -> None:
+    assert current_onboarding_stage({"name": "Антон"}) is None
+
+
+def test_workout_requires_sex_and_goal_before_setup() -> None:
+    stage = current_onboarding_stage({"name": "Антон"}, "workout_plan")
+
+    assert stage is not None
+    assert stage.key == "workout_identity"
+    assert stage.missing_fields == ("sex", "goal")
 
 
 def test_workout_onboarding_collects_training_specific_facts() -> None:

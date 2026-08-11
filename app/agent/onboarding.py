@@ -59,22 +59,21 @@ def current_onboarding_stage(
 ) -> OnboardingStage | None:
     data = profile or {}
     stages = list(STAGES)
+    if workflow is None or workflow == "meal_feedback":
+        stages = [STAGES[0]]
     if workflow == "workout_plan":
         stages = [
             STAGES[0],
-            STAGES[1],
             OnboardingStage(
-                key="goal",
-                missing_fields=("goal",),
+                key="workout_identity",
+                missing_fields=("sex", "goal"),
                 instruction_ru=(
-                    "Коротко отреагируй и спроси только цель: похудение, набор мышечной массы, "
-                    "поддержание формы или самочувствие. Не спрашивай общий уровень активности: "
-                    "он не нужен для выбора готового шаблона тренировки."
+                    "Коротко отреагируй и спроси только недостающие пол и цель. Не составляй программу, "
+                    "пока эти данные не получены."
                 ),
                 instruction_en=(
-                    "Respond briefly and ask only for the goal: weight loss, muscle gain, maintenance, "
-                    "or wellbeing. Do not ask for usual activity level; it is not needed to choose a "
-                    "ready-made workout template."
+                    "Respond briefly and ask only for the missing sex and goal. Do not create a program "
+                    "until these details are known."
                 ),
             ),
         ]
@@ -139,6 +138,7 @@ def _onboarding_reply_ru(stage: OnboardingStage) -> str:
         "body": "Чтобы продолжить, напиши недостающие данные одной фразой: возраст, пол, рост и текущий вес.",
         "goal_activity": "Уточни, пожалуйста, цель и обычный уровень активности.",
         "goal": "Уточни цель: похудение, набор мышечной массы, поддержание формы или улучшение самочувствия.",
+        "workout_identity": "Для индивидуальной программы уточни недостающие данные: пол и цель тренировок.",
         "workout_setup": (
             "Чтобы составить безопасную индивидуальную программу, уточни только недостающие пункты: "
             "где будешь заниматься (дом или зал), какой у тебя опыт (до месяца, от месяца до года "
@@ -158,6 +158,7 @@ def _onboarding_reply_en(stage: OnboardingStage) -> str:
         "body": "To continue, send the missing details in one sentence: age, sex, height, and current weight.",
         "goal_activity": "Please clarify your goal and usual activity level.",
         "goal": "Please clarify your goal: weight loss, muscle gain, maintenance, or wellbeing.",
+        "workout_identity": "For an individual program, clarify the missing details: sex and training goal.",
         "workout_setup": (
             "Before I build a safe individual program, tell me only what is still missing: "
             "where you will train (home or gym), your experience (under one month, one month to one year, "

@@ -67,7 +67,7 @@ def build_daily_menu(targets: NutritionTargets, profile: dict[str, Any] | None =
         f"**Итог меню:** {round(kcal * portion_factor)} ккал, Б/Ж/У: {round(protein * portion_factor)}/{round(fat * portion_factor)}/{round(carbs * portion_factor)} г.",
         f"**Цель:** {targets.target_kcal} ккал, Б/Ж/У: {targets.protein_g}/{targets.fat_g}/{targets.carbs_g} г.",
         f"Разница: {_signed(round(kcal * portion_factor) - targets.target_kcal)} ккал, Б {_signed(round(protein * portion_factor) - targets.protein_g)} г, Ж {_signed(round(fat * portion_factor) - targets.fat_g)} г, У {_signed(round(carbs * portion_factor) - targets.carbs_g)} г.",
-        "Для неизвестного продукта или бренда Forma найдёт данные через Google и покажет источники; эти данные не сохраняются в профиль.",
+        "Для неизвестного продукта или бренда Forma уточнит КБЖУ через поиск; эти данные не сохраняются в профиль.",
     ])
     return "\n".join(lines)
 
@@ -108,7 +108,6 @@ def build_menu_with_found_food(
         "",
         f"**Учтено дополнительно:** {name}, {grams:g} г — {extra[0]} ккал, Б/Ж/У {extra[1]}/{extra[2]}/{extra[3]} г.",
         f"**Новый итог:** {adjusted[0]} ккал, Б/Ж/У {adjusted[1]}/{adjusted[2]}/{adjusted[3]} г.",
-        "Источники: " + ", ".join(sources[:3]) + ".",
         "Это значение применено только к текущему расчёту и не сохранено в профиль.",
     ])
 
@@ -147,7 +146,7 @@ def _english_menu(
         f"Menu total: {round(kcal * portion_factor)} kcal, P/F/C "
         f"{round(protein * portion_factor)}/{round(fat * portion_factor)}/{round(carbs * portion_factor)} g. "
         f"Target: {targets.target_kcal} kcal, P/F/C {targets.protein_g}/{targets.fat_g}/{targets.carbs_g} g.\n\n"
-        "For an unknown food or brand, Forma can search Google, use the found data for the current calculation, and show the sources."
+        "For an unknown food or brand, Forma can verify nutrition data through search and use it only for the current calculation."
     )
 
 

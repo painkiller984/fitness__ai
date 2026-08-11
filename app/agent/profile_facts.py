@@ -140,7 +140,7 @@ def extract_durable_dietary_preferences(message: str) -> list[str]:
     """Keep only explicit long-term likes, dislikes and dietary patterns."""
     text = message.casefold().strip()
     patterns = (
-        r"(?:не люблю|не ем|избегаю|аллергия на)\s+([а-яёa-z][а-яёa-z -]{1,40})",
+        r"(?:не люблю|ненавижу|не ем|избегаю|аллергия на)\s+([а-яёa-z][а-яёa-z -]{1,40})",
         r"(?<!не )(?:люблю|предпочитаю)\s+(?:есть\s+)?([а-яёa-z][а-яёa-z -]{1,40})",
     )
     preferences = [match.group(1).strip(" .,!?") for pattern in patterns if (match := re.search(pattern, text, re.I))]

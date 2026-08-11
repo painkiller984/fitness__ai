@@ -136,3 +136,4 @@ def test_extracts_experience_duration_without_confusing_age() -> None:
 
 def test_extracts_only_explicit_durable_food_preferences() -> None:
     assert extract_durable_dietary_preferences("Не люблю гречку, но сегодня хочу шоколад") == ["гречку"]
+    assert extract_durable_dietary_preferences("Ненавижу рис") == ["рис"]

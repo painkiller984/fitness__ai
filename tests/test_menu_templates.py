@@ -34,4 +34,4 @@ def test_grounded_food_is_added_only_to_current_calculation() -> None:
 
     assert "Учтено дополнительно" in menu
     assert "110 ккал" in menu
-    assert "https://example.test/chocolate" in menu
+    assert "https://example.test/chocolate" not in menu

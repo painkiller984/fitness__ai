@@ -10,6 +10,13 @@ from nicegui import app, ui
 
 from app.agent.memory import ConversationMemory
 from app.agent.language import response_language
+from app.agent.dialogue_state import (
+    enforce_name_gate,
+    filter_profile_facts,
+    requested_workflow,
+    switch_workflow,
+    workflow_choice,
+)
 from app.agent.chat_policy import (
     build_complete_profile,
     format_profile_data,
@@ -90,7 +97,6 @@ def configure_pages(settings: Settings) -> None:
             "profile": None,
             "pending_facts": {},
             "active_workflow": None,
-            "workout_setup": None,
             "token": None,
             "user_id": None,
         }
@@ -227,19 +233,10 @@ def configure_pages(settings: Settings) -> None:
                 normalized = message.casefold().strip()
                 language = response_language(message)
                 intent = route_intent(message)
-                if intent == "workout_plan" and state["active_workflow"] != "workout_plan":
-                    state["active_workflow"] = "workout_plan"
-                    # Reconfirm the safety-critical training context for each new program.
-                    # Older profile values may describe a previous routine.
-                    state["workout_setup"] = {
-                        "training_place": None,
-                        "training_experience": None,
-                        "health_screened": False,
-                    }
-                elif intent in {"nutrition_targets", "meal_plan"}:
-                    state["active_workflow"] = intent
-                elif intent == "meal_adjustment":
-                    state["active_workflow"] = "meal_plan"
+                name_was_known = bool(public_profile_context(state["profile"]).get("name"))
+                new_workflow = requested_workflow(intent)
+                if name_was_known and new_workflow:
+                    switch_workflow(state, new_workflow)
                 delete_commands = {"удали мои данные", "удалить мои данные", "delete my data"}
                 show_commands = {"покажи мои данные", "показать мои данные", "show my data"}
                 if normalized in delete_commands and gateway and state["token"]:
@@ -261,7 +258,6 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"] = ConversationMemory()
                     state["pending_facts"] = {}
                     state["active_workflow"] = None
-                    state["workout_setup"] = None
                     typing.delete()
                     add_bubble(
                         "Your data has been cleared and queued for permanent deletion. You can start again by telling me about yourself."
@@ -275,7 +271,6 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"] = ConversationMemory()
                     state["pending_facts"] = {}
                     state["active_workflow"] = None
-                    state["workout_setup"] = None
                     typing.delete()
                     add_bubble(
                         "Your local profile has been deleted. You can start again by telling me about yourself."
@@ -291,25 +286,15 @@ def configure_pages(settings: Settings) -> None:
                     **public_profile_context(state["profile"]),
                     **state["pending_facts"],
                 }
-                workout_setup = state["workout_setup"]
-                onboarding_profile = (
-                    {**known_profile, **workout_setup}
-                    if state["active_workflow"] == "workout_plan" and workout_setup is not None
-                    else known_profile
-                )
-                expected_stage = current_onboarding_stage(onboarding_profile, state["active_workflow"])
+                expected_stage = current_onboarding_stage(known_profile, state["active_workflow"])
                 expected_fields = set(expected_stage.missing_fields) if expected_stage else set()
-                facts = extract_profile_facts(message, expected_fields)
-                if state["active_workflow"] == "workout_plan" and workout_setup is not None:
-                    workout_setup.update(
-                        {
-                            key: facts[key]
-                            for key in ("training_place", "training_experience", "health_screened")
-                            if key in facts
-                        }
-                    )
+                facts = filter_profile_facts(
+                    extract_profile_facts(message, expected_fields),
+                    state["active_workflow"],
+                    expected_stage.key if expected_stage else None,
+                )
                 preferences = extract_durable_dietary_preferences(message)
-                if preferences:
+                if preferences and state["active_workflow"] in {"meal_plan", "meal_feedback"}:
                     saved_preferences = list(known_profile.get("dietary_preferences") or [])
                     facts["dietary_preferences"] = list(dict.fromkeys([*saved_preferences, *preferences]))
                 combined_facts = {**state["pending_facts"], **facts}
@@ -343,11 +328,7 @@ def configure_pages(settings: Settings) -> None:
                         **state["pending_facts"],
                     }.items()
                 }
-                workflow_profile = (
-                    {**profile_context, **workout_setup}
-                    if state["active_workflow"] == "workout_plan" and workout_setup is not None
-                    else profile_context
-                )
+                workflow_profile = profile_context
                 onboarding_stage = current_onboarding_stage(workflow_profile, state["active_workflow"])
                 if onboarding_stage:
                     workflow_profile["_onboarding"] = onboarding_context(onboarding_stage, language)
@@ -366,6 +347,19 @@ def configure_pages(settings: Settings) -> None:
                         profile_context.update(updates)
                 if urgent_reply:
                     reply = urgent_reply
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
+                elif onboarding_stage and onboarding_stage.key == "name":
+                    reply = enforce_name_gate(
+                        await provider.conversation.respond(
+                            message, state["memory"].recent(), workflow_profile
+                        ),
+                        language,
+                    )
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
+                elif not name_was_known and profile_context.get("name") and state["active_workflow"] is None:
+                    reply = workflow_choice(profile_context.get("name"), language)
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 elif onboarding_stage:
@@ -390,13 +384,20 @@ def configure_pages(settings: Settings) -> None:
                             )
                         )
                     )
+                    if gateway and state["token"]:
+                        try:
+                            await gateway.save_plan(
+                                state["token"], state["user_id"], "workout",
+                                {"markdown": reply, "profile": profile_context, "provider": provider.label},
+                            )
+                        except SupabaseError:
+                            logging.exception("Could not persist workout plan")
                     state["active_workflow"] = None
-                    state["workout_setup"] = None
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 else:
                     workflow_intent = state["active_workflow"] or intent
-                    if workflow_intent == "meal_plan" and complete_profile:
+                    if workflow_intent in {"meal_plan", "meal_feedback"} and complete_profile:
                         targets = calculate_nutrition_targets(complete_profile)
                         if intent == "meal_adjustment" and not is_known_food(message) and provider.food_search:
                             found_food = await provider.food_search.lookup(message)
@@ -413,7 +414,7 @@ def configure_pages(settings: Settings) -> None:
                             elif found_food:
                                 reply = (
                                     f"Нашёл данные для «{found_food.name}»: {found_food.kcal_per_100g:g} ккал на 100 г. "
-                                    f"Напиши порцию в граммах — и я сразу внесу продукт в текущий расчёт. Источник: {found_food.sources[0]}"
+                                    f"Напиши порцию в граммах — и я сразу внесу продукт в текущий расчёт."
                                 )
                             else:
                                 reply = "Не удалось надёжно найти КБЖУ этого продукта. Пришли фото или данные с упаковки — я учту их в расчёте."
@@ -435,7 +436,15 @@ def configure_pages(settings: Settings) -> None:
                                     )
                                 )
                             )
-                        state["active_workflow"] = None
+                        if gateway and state["token"]:
+                            try:
+                                await gateway.save_plan(
+                                    state["token"], state["user_id"], "nutrition",
+                                    {"markdown": reply, "profile": profile_context, "provider": provider.label},
+                                )
+                            except SupabaseError:
+                                logging.exception("Could not persist nutrition plan")
+                        state["active_workflow"] = "meal_feedback"
                         state["memory"].add("user", message)
                         state["memory"].add("assistant", reply)
                     elif should_use_bounded_agent(workflow_intent, complete_profile):

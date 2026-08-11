@@ -61,3 +61,29 @@ def test_deletion_request_erases_personal_fields(monkeypatch) -> None:
     assert captured["body"]["name"] is None
     assert captured["body"]["target_kcal"] is None
     assert captured["body"]["deletion_requested_at"]
+
+
+def test_generated_plan_is_saved_under_users_rls_identity(monkeypatch) -> None:
+    captured: dict = {}
+    original_client = httpx.AsyncClient
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["authorization"] = request.headers.get("authorization")
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(201, json=[{"id": 1, **captured["body"]}])
+
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs)
+    )
+    asyncio.run(
+        SupabaseGateway("https://example.supabase.co", "publishable").save_plan(
+            "jwt", "user-1", "workout", {"markdown": "plan"}
+        )
+    )
+
+    assert captured["path"] == "/rest/v1/plans"
+    assert captured["authorization"] == "Bearer jwt"
+    assert captured["body"]["user_id"] == "user-1"
+    assert captured["body"]["kind"] == "workout"
