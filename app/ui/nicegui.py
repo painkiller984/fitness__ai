@@ -507,11 +507,4 @@ def configure_pages(settings: Settings) -> None:
                 ({clear_and_submit})(event.target.value, event.target);
             }}""",
         )
-        send_button.on(
-            "click",
-            ask_from_browser,
-            js_handler=f"""() => {{
-                const input = getHtmlElement({question.id})?.querySelector('textarea');
-                if (input) ({clear_and_submit})(input.value, input);
-            }}""",
-        )
+        send_button.on("click", lambda: ask())

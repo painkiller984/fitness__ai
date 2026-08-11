@@ -40,9 +40,14 @@ def test_workout_cannot_persist_nutrition_body_fields() -> None:
     }
 
 
-def test_name_stage_persists_only_identity() -> None:
+def test_name_stage_keeps_other_explicit_facts_from_the_same_message() -> None:
     facts = {"name": "Антон", "age": 27, "goal": "weight_loss"}
-    assert filter_profile_facts(facts, None, "name") == {"name": "Антон"}
+    assert filter_profile_facts(facts, None, "name") == facts
+
+
+def test_name_gate_does_not_persist_other_facts_without_a_name() -> None:
+    facts = {"age": 27, "goal": "weight_loss"}
+    assert filter_profile_facts(facts, None, "name") == {}
 
 
 def test_name_gate_keeps_natural_reply_and_enforces_question() -> None:

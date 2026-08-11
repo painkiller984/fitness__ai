@@ -63,6 +63,11 @@ def filter_profile_facts(
     facts: dict[str, Any], workflow: str | None, stage_key: str | None
 ) -> dict[str, Any]:
     allowed = allowed_profile_fields(workflow, stage_key)
+    if stage_key == "name" and facts.get("name"):
+        # The name gate is still mandatory, but a user may naturally provide their
+        # other profile details in the same message. Keep those explicit facts
+        # instead of forcing them to type the same information a second time.
+        allowed |= NUTRITION_FIELDS | WORKOUT_FIELDS
     return {key: value for key, value in facts.items() if key in allowed}
 
 
