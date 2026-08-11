@@ -19,6 +19,14 @@ HOME = {
     "shoulders": "жим гантелей стоя или подъёмы с резиной",
     "glutes": "ягодичный мост или болгарские выпады",
 }
+BODYWEIGHT = {
+    "squat": "присед с собственным весом или болгарские выпады",
+    "hinge": "ягодичный мост",
+    "push": "отжимания от опоры или пола",
+    "pull": "тяга резины; если её нет — обратные снежные ангелы лёжа",
+    "shoulders": "планка с касанием плеч",
+    "glutes": "ягодичный мост на одной ноге",
+}
 
 
 def build_workout_program(profile: dict[str, Any], language: str = "ru") -> str:
@@ -27,7 +35,7 @@ def build_workout_program(profile: dict[str, Any], language: str = "ru") -> str:
         return "The flexible workout library is currently provided in Russian. Please switch to Russian for a full program."
 
     place = str(profile.get("training_place") or "gym")
-    library = HOME if place == "home" else GYM
+    library = _select_library(place, profile.get("available_equipment") or [])
     level = str(profile.get("training_experience") or "beginner")
     days = int(profile.get("training_days_per_week") or 3)
     days = min(max(days, 2), 4)
@@ -86,6 +94,14 @@ def _focus(profile: dict[str, Any]) -> str | None:
     if any(word in value for word in ("верх", "груд", "спин", "плеч")):
         return "верх тела"
     return None
+
+
+def _select_library(place: str, equipment: list[str]) -> dict[str, str]:
+    if place != "home":
+        return GYM
+    if not equipment:
+        return BODYWEIGHT
+    return HOME
 
 
 def _progression(level: str, goal: str) -> str:

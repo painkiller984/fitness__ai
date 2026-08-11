@@ -37,9 +37,18 @@ def test_health_note_keeps_program_and_adds_referral() -> None:
 
 
 def test_home_user_receives_home_exercise_variants() -> None:
-    program = build_workout_program(profile(training_place="home"))
+    program = build_workout_program(
+        profile(training_place="home", available_equipment=["dumbbells"])
+    )
     assert "место: дом" in program
     assert "гоблет-присед" in program
+
+
+def test_home_user_without_equipment_receives_bodyweight_variants() -> None:
+    program = build_workout_program(profile(training_place="home", available_equipment=[]))
+
+    assert "присед с собственным весом" in program
+    assert "тяга резины; если её нет" in program
 
 
 def test_female_default_and_explicit_focus_change_the_accent() -> None:

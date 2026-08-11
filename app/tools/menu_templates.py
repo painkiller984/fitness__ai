@@ -47,8 +47,9 @@ def build_daily_menu(targets: NutritionTargets, profile: dict[str, Any] | None =
     profile = profile or {}
     choices = {meal: _pick_option(meal, profile) for meal in MEALS}
     totals = _totals(choices.values())
+    portion_factor = min(1.35, max(0.70, targets.target_kcal / totals[0]))
     if language == "en":
-        return _english_menu(targets, totals)
+        return _english_menu(targets, totals, portion_factor)
 
     lines = [
         "Готовый рацион на день. Он собран из проверенной локальной библиотеки с учётом сохранённых предпочтений.",
@@ -62,9 +63,10 @@ def build_daily_menu(targets: NutritionTargets, profile: dict[str, Any] | None =
     kcal, protein, fat, carbs = totals
     lines.extend([
         "",
-        f"**Итог меню:** {kcal} ккал, Б/Ж/У: {protein}/{fat}/{carbs} г.",
+        f"**Персональные порции:** базовые порции умножены на {portion_factor:.2f} под вашу цель.",
+        f"**Итог меню:** {round(kcal * portion_factor)} ккал, Б/Ж/У: {round(protein * portion_factor)}/{round(fat * portion_factor)}/{round(carbs * portion_factor)} г.",
         f"**Цель:** {targets.target_kcal} ккал, Б/Ж/У: {targets.protein_g}/{targets.fat_g}/{targets.carbs_g} г.",
-        f"Разница: {_signed(kcal - targets.target_kcal)} ккал, Б {_signed(protein - targets.protein_g)} г, Ж {_signed(fat - targets.fat_g)} г, У {_signed(carbs - targets.carbs_g)} г.",
+        f"Разница: {_signed(round(kcal * portion_factor) - targets.target_kcal)} ккал, Б {_signed(round(protein * portion_factor) - targets.protein_g)} г, Ж {_signed(round(fat * portion_factor) - targets.fat_g)} г, У {_signed(round(carbs * portion_factor) - targets.carbs_g)} г.",
         "Для неизвестного продукта или бренда Forma найдёт данные через Google и покажет источники; эти данные не сохраняются в профиль.",
     ])
     return "\n".join(lines)
@@ -135,11 +137,15 @@ def _totals(options: Any) -> tuple[int, int, int, int]:
     return tuple(sum(getattr(option, field) for option in options) for field in ("kcal", "protein", "fat", "carbs"))
 
 
-def _english_menu(targets: NutritionTargets, totals: tuple[int, int, int, int]) -> str:
+def _english_menu(
+    targets: NutritionTargets, totals: tuple[int, int, int, int], portion_factor: float
+) -> str:
     kcal, protein, fat, carbs = totals
     return (
         "Ready-made daily menu from Forma's local food library. Each meal has two interchangeable alternatives.\n\n"
-        f"Menu total: {kcal} kcal, P/F/C {protein}/{fat}/{carbs} g. "
+        f"Personal portions use a {portion_factor:.2f} multiplier for your target.\n"
+        f"Menu total: {round(kcal * portion_factor)} kcal, P/F/C "
+        f"{round(protein * portion_factor)}/{round(fat * portion_factor)}/{round(carbs * portion_factor)} g. "
         f"Target: {targets.target_kcal} kcal, P/F/C {targets.protein_g}/{targets.fat_g}/{targets.carbs_g} g.\n\n"
         "For an unknown food or brand, Forma can search Google, use the found data for the current calculation, and show the sources."
     )

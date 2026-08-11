@@ -62,6 +62,8 @@ def test_workout_onboarding_collects_training_specific_facts() -> None:
     assert stage.missing_fields == (
         "training_place",
         "training_experience",
+        "training_days_per_week",
+        "equipment_screened",
         "health_screened",
     )
 

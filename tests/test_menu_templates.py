@@ -16,6 +16,7 @@ def test_menu_shows_auditable_total_target_and_replacements() -> None:
     assert "Цель" in menu
     assert "Разница" in menu
     assert "Замены:" in menu
+    assert "Персональные порции" in menu
 
 
 def test_menu_excludes_a_saved_dislike_when_an_alternative_exists() -> None:

@@ -84,20 +84,22 @@ def current_onboarding_stage(
                 missing_fields=(
                     "training_place",
                     "training_experience",
+                    "training_days_per_week",
+                    "equipment_screened",
                     "health_screened",
                 ),
                 instruction_ru=(
                     "Коротко отреагируй, но не составляй программу. Спроси только недостающие данные: "
                     "где заниматься (дом, зал, улица), тренировочный стаж (до месяца, от месяца до года "
                     "или больше года) и есть ли травмы, заболевания или другие ограничения. Не спрашивай "
-                    "про общий уровень активности, дни тренировок или оборудование: готовые шаблоны уже "
-                    "рассчитаны на три занятия в неделю. Не выдумывай данные."
+                    "про общий уровень активности. Обязательно узнай, сколько тренировок в неделю реально "
+                    "удобно, и какое оборудование доступно. Не выдумывай данные."
                 ),
                 instruction_en=(
                     "Respond briefly but do not create a program yet. Ask only for the missing workout details: "
                     "place, training experience (under one month, one month to one year, or over one year), "
-                    "and injuries, health conditions, or other limitations. Do not ask about activity level, "
-                    "training days, or equipment: the ready-made templates already use three sessions per week."
+                    "training days available each week, equipment, and injuries, health conditions, or other limitations. "
+                    "Do not ask about activity level and never invent missing data."
                 ),
             )
         )
