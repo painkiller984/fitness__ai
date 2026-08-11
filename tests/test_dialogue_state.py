@@ -15,6 +15,14 @@ def test_quick_command_replaces_unfinished_workflow() -> None:
     assert state == {"active_workflow": "workout_plan", "pending_facts": {}}
 
 
+def test_ambiguous_request_cancels_unfinished_workflow() -> None:
+    state = {"active_workflow": "meal_plan", "pending_facts": {"age": 27}}
+
+    switch_workflow(state, None)
+
+    assert state == {"active_workflow": None, "pending_facts": {}}
+
+
 def test_workout_cannot_persist_nutrition_body_fields() -> None:
     extracted = {
         "sex": "male",

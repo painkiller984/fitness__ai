@@ -100,9 +100,17 @@ class SupabaseGateway:
         return rows[0]
 
     async def request_anonymous_deletion(self, access_token: str, user_id: str) -> None:
-        """Erase profile fields now; the scheduled job removes the Auth user permanently."""
+        """Erase all user-owned content now; cron removes the Auth user permanently."""
         headers = self._headers(access_token)
         headers["Prefer"] = "return=minimal"
+        async with httpx.AsyncClient(timeout=20) as client:
+            for table in ("plans", "progress_entries", "profiles"):
+                response = await client.delete(
+                    f"{self.url}/rest/v1/{table}",
+                    headers=headers,
+                    params={"user_id": f"eq.{user_id}"},
+                )
+                self._unwrap(response)
         payload = {
             "name": None,
             "surname": None,
@@ -121,6 +129,8 @@ class SupabaseGateway:
             "dietary_preferences": [],
             "allergies": [],
             "injuries": [],
+            "medical_notes": "",
+            "is_pregnant": False,
             "target_kcal": None,
             "protein_g": None,
             "fat_g": None,
@@ -150,16 +160,39 @@ class SupabaseGateway:
         return rows[0] if rows else None
 
     async def save_plan(
-        self, access_token: str, user_id: str, kind: str, payload: dict[str, Any]
+        self,
+        access_token: str,
+        user_id: str,
+        kind: str,
+        payload: dict[str, Any],
+        calculation_version: str,
     ) -> dict[str, Any]:
-        """Persist a generated plan under the anonymous Auth user's RLS identity."""
+        """Archive the previous plan of this kind and persist the new active plan."""
         headers = self._headers(access_token)
         headers["Prefer"] = "return=representation"
         async with httpx.AsyncClient(timeout=20) as client:
+            archive_headers = self._headers(access_token)
+            archive_headers["Prefer"] = "return=minimal"
+            response = await client.patch(
+                f"{self.url}/rest/v1/plans",
+                headers=archive_headers,
+                params={
+                    "user_id": f"eq.{user_id}",
+                    "kind": f"eq.{kind}",
+                    "status": "eq.active",
+                },
+                json={"status": "archived"},
+            )
+            self._unwrap(response)
             response = await client.post(
                 f"{self.url}/rest/v1/plans",
                 headers=headers,
-                json={"user_id": user_id, "kind": kind, "payload": payload},
+                json={
+                    "user_id": user_id,
+                    "kind": kind,
+                    "payload": payload,
+                    "calculation_version": calculation_version,
+                },
             )
         rows = self._unwrap(response)
         return rows[0]

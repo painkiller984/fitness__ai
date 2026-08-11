@@ -139,14 +139,19 @@ def extract_profile_facts(message: str, expected_fields: set[str] | None = None)
 def extract_durable_dietary_preferences(message: str) -> list[str]:
     """Keep only explicit long-term likes, dislikes and dietary patterns."""
     text = message.casefold().strip()
+    preferences: list[str] = []
     patterns = (
-        r"(?:не люблю|ненавижу|не ем|избегаю|аллергия на)\s+([а-яёa-z][а-яёa-z -]{1,40})",
-        r"(?<!не )(?:люблю|предпочитаю)\s+(?:есть\s+)?([а-яёa-z][а-яёa-z -]{1,40})",
+        ("dislike", r"(?:не люблю|ненавижу|не ем|избегаю)\s+([а-яёa-z][а-яёa-z -]{1,40})"),
+        ("like", r"(?<!не )(?:люблю|предпочитаю)\s+(?:есть\s+)?([а-яёa-z][а-яёa-z -]{1,40})"),
     )
-    preferences = [match.group(1).strip(" .,!?") for pattern in patterns if (match := re.search(pattern, text, re.I))]
+    for kind, pattern in patterns:
+        if match := re.search(pattern, text, re.I):
+            item = match.group(1).strip(" .,!?")
+            if len(item) > 1:
+                preferences.append(f"{kind}:{item}")
     if any(word in text for word in ("вегетариан", "vegetarian")):
-        preferences.append("вегетарианство")
-    return list(dict.fromkeys(item for item in preferences if len(item) > 1))
+        preferences.append("diet:vegetarian")
+    return list(dict.fromkeys(preferences))
 
 
 def _extract_equipment(text: str) -> list[str] | None:

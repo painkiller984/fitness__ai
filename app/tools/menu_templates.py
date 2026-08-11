@@ -113,7 +113,14 @@ def build_menu_with_found_food(
 
 
 def _allowed_options(meal: str, profile: dict[str, Any]) -> list[MealOption]:
-    blocked = {str(item).casefold() for item in [*profile.get("allergies", []), *profile.get("dietary_preferences", [])]}
+    blocked = {str(item).casefold() for item in profile.get("allergies", [])}
+    for item in profile.get("dietary_preferences", []):
+        preference = str(item).casefold()
+        if preference.startswith("dislike:"):
+            blocked.add(preference.removeprefix("dislike:").strip())
+        elif not preference.startswith(("like:", "diet:")):
+            # Backward compatibility for profiles saved before preference polarity existed.
+            blocked.add(preference)
     available = [
         option for option in MEALS[meal]
         if not any(_preference_blocks_tag(preference, tag) for preference in blocked for tag in option.tags)

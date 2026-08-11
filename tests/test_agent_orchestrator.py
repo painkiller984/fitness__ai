@@ -13,6 +13,8 @@ def test_router():
     assert route_intent("Составь меню на день") == "meal_plan"
     assert route_intent("Хочу съесть немного шоколада") == "meal_adjustment"
     assert route_intent("Какие упражнения делать дома?") == "workout_plan"
+    assert route_intent("Рассчитай калории для снижения веса") == "nutrition_targets"
+    assert route_intent("Составь меню и тренировку") == "ambiguous_workflow"
 
 
 def test_orchestrator_uses_verified_targets():

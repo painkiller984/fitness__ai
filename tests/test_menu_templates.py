@@ -20,9 +20,15 @@ def test_menu_shows_auditable_total_target_and_replacements() -> None:
 
 
 def test_menu_excludes_a_saved_dislike_when_an_alternative_exists() -> None:
-    menu = build_daily_menu(targets(), {"name": "Антон", "dietary_preferences": ["не люблю гречку"]})
+    menu = build_daily_menu(targets(), {"name": "Антон", "dietary_preferences": ["dislike:гречку"]})
 
     assert "Курица с гречкой" not in menu
+
+
+def test_menu_does_not_treat_a_saved_like_as_an_exclusion() -> None:
+    menu = build_daily_menu(targets(), {"name": "Антон", "dietary_preferences": ["like:гречку"]})
+
+    assert "Курица с гречкой" in menu
 
 
 def test_grounded_food_is_added_only_to_current_calculation() -> None:

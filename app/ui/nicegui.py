@@ -100,6 +100,7 @@ def configure_pages(settings: Settings) -> None:
             "token": None,
             "user_id": None,
         }
+        request_lock = asyncio.Lock()
 
         def activate_local_fallback(seed: dict[str, Any] | None = None) -> None:
             user_id = app.storage.user.get("local_profile_id") or str(uuid4())
@@ -221,7 +222,7 @@ def configure_pages(settings: Settings) -> None:
             asyncio.create_task(scroll_to_latest())
             return typing
 
-        async def ask(text: str | None = None) -> None:
+        async def _ask(text: str | None = None) -> None:
             message = (text if text is not None else question.value).strip()
             if not message:
                 return
@@ -237,6 +238,8 @@ def configure_pages(settings: Settings) -> None:
                 new_workflow = requested_workflow(intent)
                 if name_was_known and new_workflow:
                     switch_workflow(state, new_workflow)
+                elif name_was_known and intent == "ambiguous_workflow":
+                    switch_workflow(state, None)
                 delete_commands = {"удали мои данные", "удалить мои данные", "delete my data"}
                 show_commands = {"покажи мои данные", "показать мои данные", "show my data"}
                 if normalized in delete_commands and gateway and state["token"]:
@@ -362,6 +365,16 @@ def configure_pages(settings: Settings) -> None:
                     reply = workflow_choice(profile_context.get("name"), language)
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
+                elif intent == "ambiguous_workflow":
+                    reply = (
+                        "I can do both, but I keep the calculations separate so the data is not mixed. "
+                        "Which should we do first: calories and macros, a meal plan, or a workout plan?"
+                        if language == "en"
+                        else "Я могу сделать и то и другое, но веду расчёты раздельно, чтобы данные не смешивались. "
+                        "С чего начнём: КБЖУ, план питания или план тренировок?"
+                    )
+                    state["memory"].add("user", message)
+                    state["memory"].add("assistant", reply)
                 elif onboarding_stage:
                     reply = onboarding_reply(onboarding_stage, language)
                     state["memory"].add("user", message)
@@ -389,6 +402,7 @@ def configure_pages(settings: Settings) -> None:
                             await gateway.save_plan(
                                 state["token"], state["user_id"], "workout",
                                 {"markdown": reply, "profile": profile_context, "provider": provider.label},
+                                "workout-v1",
                             )
                         except SupabaseError:
                             logging.exception("Could not persist workout plan")
@@ -441,6 +455,7 @@ def configure_pages(settings: Settings) -> None:
                                 await gateway.save_plan(
                                     state["token"], state["user_id"], "nutrition",
                                     {"markdown": reply, "profile": profile_context, "provider": provider.label},
+                                    "mifflin-v1",
                                 )
                             except SupabaseError:
                                 logging.exception("Could not persist nutrition plan")
@@ -466,6 +481,11 @@ def configure_pages(settings: Settings) -> None:
                     if response_language(message) == "en"
                     else "Не удалось подготовить ответ. Попробуйте ещё раз чуть позже."
                 )
+
+        async def ask(text: str | None = None) -> None:
+            """Serialize Enter and quick-action requests so workflows cannot race."""
+            async with request_lock:
+                await _ask(text)
 
         async def ask_from_browser(event: Any) -> None:
             """Submit the value captured in the browser before clearing the textarea."""

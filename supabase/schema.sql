@@ -44,10 +44,12 @@ create table if not exists public.plans (
     kind text not null check (kind in ('nutrition', 'workout', 'combined')),
     status text not null default 'active' check (status in ('draft', 'active', 'archived')),
     payload jsonb not null,
-    calculation_version text not null default 'mifflin-v1',
+    calculation_version text not null default 'plan-v1',
     judge_result jsonb,
     created_at timestamptz not null default now()
 );
+
+alter table public.plans alter column calculation_version set default 'plan-v1';
 
 alter table public.profiles enable row level security;
 alter table public.progress_entries enable row level security;
