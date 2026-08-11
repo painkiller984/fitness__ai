@@ -378,9 +378,9 @@ def configure_pages(settings: Settings) -> None:
                         else (
                             build_workout_program(workflow_profile, language)
                             + (
-                                "\n\n⚠️ Google Search is temporarily unavailable; this is Forma's local fallback plan."
+                                "\n\n⚠️ Gemini is temporarily unavailable; this is Forma's local fallback plan."
                                 if language == "en"
-                                else "\n\n⚠️ Google Search временно недоступен — показан локальный резервный план Forma."
+                                else "\n\n⚠️ Gemini временно недоступен — показан локальный резервный план Forma."
                             )
                         )
                     )
@@ -430,9 +430,9 @@ def configure_pages(settings: Settings) -> None:
                                 else (
                                     build_daily_menu(targets, profile_context, language=language)
                                     + (
-                                        "\n\n⚠️ Google Search is temporarily unavailable; this is Forma's local fallback menu."
+                                        "\n\n⚠️ Gemini is temporarily unavailable; this is Forma's local fallback menu."
                                         if language == "en"
-                                        else "\n\n⚠️ Google Search временно недоступен — показано локальное резервное меню Forma."
+                                        else "\n\n⚠️ Gemini временно недоступен — показано локальное резервное меню Forma."
                                     )
                                 )
                             )

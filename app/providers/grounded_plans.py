@@ -19,7 +19,7 @@ class GroundedPlan:
 
 
 class GeminiGroundedPlanSearch:
-    """Build personalized plans with Google Search grounding and explicit sources."""
+    """Build plans with search grounding and a normal Gemini generation fallback."""
 
     def __init__(self, api_key: str, model: str) -> None:
         from google import genai
@@ -31,7 +31,7 @@ class GeminiGroundedPlanSearch:
         self, profile: dict[str, Any], language: str = "ru"
     ) -> GroundedPlan | None:
         prompt = (
-            "Use Google Search and reliable sources such as ACSM, WHO, government health services, "
+            "Base the recommendations on established guidance such as ACSM, WHO, government health services, "
             "and peer-reviewed sports medicine literature. Create a practical personalized workout plan. "
             "The plan must explicitly use sex, training experience, goal, training location, health limitations, "
             "and available equipment when provided. Do not use the same exercise order for every person. "
@@ -56,7 +56,7 @@ class GeminiGroundedPlanSearch:
         language: str = "ru",
     ) -> GroundedPlan | None:
         prompt = (
-            "Use Google Search and reliable nutrition sources such as government food databases, national health "
+            "Base the menu on reliable nutrition knowledge such as government food databases, national health "
             "services, and reputable dietetic guidance. Create one varied personalized day menu with exact ingredient "
             "weights and 2 alternatives for each meal. Respect allergies, dietary restrictions, saved dislikes, "
             "preferences, goal, and sex. The deterministic nutrition target below is authoritative: keep total calories "
@@ -71,21 +71,40 @@ class GeminiGroundedPlanSearch:
         return await self._generate(prompt)
 
     async def _generate(self, prompt: str) -> GroundedPlan | None:
+        """Try grounded search first, then generate with Gemini itself using the same framework."""
         try:
             interaction = await asyncio.to_thread(
                 self.client.interactions.create,
                 model=self.model,
-                input=prompt,
+                input=(
+                    "Use Google Search to verify the factual foundation, then follow this specification. "
+                    "Keep citations internal and do not include links in the answer.\n\n" + prompt
+                ),
                 tools=[{"type": "google_search"}],
                 generation_config={"thinking_level": "low"},
                 store=False,
             )
         except Exception:
-            logging.exception("Gemini grounded plan search failed")
+            logging.warning("Gemini Google Search grounding failed; trying normal generation", exc_info=True)
+        else:
+            grounded = parse_grounded_plan(
+                interaction.output_text or "", _extract_citations(interaction)
+            )
+            if grounded:
+                return grounded
+
+        try:
+            interaction = await asyncio.to_thread(
+                self.client.interactions.create,
+                model=self.model,
+                input=prompt,
+                generation_config={"thinking_level": "low"},
+                store=False,
+            )
+        except Exception:
+            logging.exception("Gemini plan generation failed")
             return None
-        return parse_grounded_plan(
-            interaction.output_text or "", _extract_citations(interaction)
-        )
+        return parse_generated_plan(interaction.output_text or "")
 
 
 def parse_grounded_plan(
@@ -108,6 +127,22 @@ def parse_grounded_plan(
         if len(markdown) < 80 or not sources:
             return None
         return GroundedPlan(markdown, sources)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def parse_generated_plan(raw: str) -> GroundedPlan | None:
+    """Accept a sufficiently detailed uncited answer produced directly by Gemini."""
+    try:
+        start, end = raw.find("{"), raw.rfind("}")
+        if start >= 0 and end > start:
+            data = json.loads(raw[start : end + 1])
+            markdown = str(data.get("plan_markdown") or "").strip()
+        else:
+            markdown = raw.strip()
+        if len(markdown) < 80:
+            return None
+        return GroundedPlan(markdown, ())
     except (TypeError, ValueError, json.JSONDecodeError):
         return None
 
