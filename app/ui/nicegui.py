@@ -381,7 +381,14 @@ def configure_pages(settings: Settings) -> None:
                     reply = (
                         grounded_workout.render(language)
                         if grounded_workout
-                        else build_workout_program(workflow_profile, language)
+                        else (
+                            build_workout_program(workflow_profile, language)
+                            + (
+                                "\n\n⚠️ Google Search is temporarily unavailable; this is Forma's local fallback plan."
+                                if language == "en"
+                                else "\n\n⚠️ Google Search временно недоступен — показан локальный резервный план Forma."
+                            )
+                        )
                     )
                     state["active_workflow"] = None
                     state["workout_setup"] = None
@@ -419,7 +426,14 @@ def configure_pages(settings: Settings) -> None:
                             reply = (
                                 grounded_menu.render(language)
                                 if grounded_menu
-                                else build_daily_menu(targets, profile_context, language=language)
+                                else (
+                                    build_daily_menu(targets, profile_context, language=language)
+                                    + (
+                                        "\n\n⚠️ Google Search is temporarily unavailable; this is Forma's local fallback menu."
+                                        if language == "en"
+                                        else "\n\n⚠️ Google Search временно недоступен — показано локальное резервное меню Forma."
+                                    )
+                                )
                             )
                         state["active_workflow"] = None
                         state["memory"].add("user", message)

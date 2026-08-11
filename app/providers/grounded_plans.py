@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,9 +15,7 @@ class GroundedPlan:
     sources: tuple[str, ...]
 
     def render(self, language: str = "ru") -> str:
-        heading = "Sources" if language == "en" else "Источники"
-        links = "\n".join(f"- {url}" for url in self.sources[:5])
-        return f"{self.markdown}\n\n**{heading}:**\n{links}"
+        return self.markdown
 
 
 class GeminiGroundedPlanSearch:
@@ -41,7 +40,7 @@ class GeminiGroundedPlanSearch:
             "when appropriate. If pain, injury, pregnancy, or disease is present, advise consulting a relevant "
             "clinician and avoid presenting painful movements as mandatory. Do not diagnose. "
             f"Write the plan in {'English' if language == 'en' else 'Russian'}. "
-            "Return JSON only with keys plan_markdown and sources. sources must be an array of direct source URLs. "
+            "Return the final plan as Markdown only. Do not wrap it in JSON. "
             f"User profile: {json.dumps(_safe_profile(profile), ensure_ascii=False)}"
         )
         return await self._generate(prompt)
@@ -60,7 +59,7 @@ class GeminiGroundedPlanSearch:
             "within 5 percent and make protein, fat, and carbohydrate totals as close as practical. Show estimated "
             "calories and P/F/C for every meal and the day total. Do not claim medical treatment. "
             f"Write the menu in {'English' if language == 'en' else 'Russian'}. "
-            "Return JSON only with keys plan_markdown and sources. sources must be an array of direct source URLs. "
+            "Return the final menu as Markdown only. Do not wrap it in JSON. "
             f"User profile: {json.dumps(_safe_profile(profile), ensure_ascii=False)}. "
             f"Authoritative target: {json.dumps(targets.model_dump(), ensure_ascii=False)}"
         )
@@ -73,33 +72,53 @@ class GeminiGroundedPlanSearch:
                 model=self.model,
                 input=prompt,
                 tools=[{"type": "google_search"}],
-                generation_config={"thinking_level": "minimal"},
+                generation_config={"thinking_level": "low"},
                 store=False,
             )
         except Exception:
+            logging.exception("Gemini grounded plan search failed")
             return None
-        return parse_grounded_plan(interaction.output_text or "")
+        return parse_grounded_plan(
+            interaction.output_text or "", _extract_citations(interaction)
+        )
 
 
-def parse_grounded_plan(raw: str) -> GroundedPlan | None:
+def parse_grounded_plan(
+    raw: str, citations: tuple[str, ...] = ()
+) -> GroundedPlan | None:
     try:
         start, end = raw.find("{"), raw.rfind("}")
-        if start < 0 or end <= start:
-            return None
-        data = json.loads(raw[start : end + 1])
-        markdown = str(data.get("plan_markdown") or "").strip()
-        sources = tuple(
-            dict.fromkeys(
+        if start >= 0 and end > start:
+            data = json.loads(raw[start : end + 1])
+            markdown = str(data.get("plan_markdown") or "").strip()
+            embedded_sources = tuple(
                 str(url).strip()
                 for url in data.get("sources", [])
                 if str(url).startswith(("https://", "http://"))
             )
-        )
+        else:
+            markdown = raw.strip()
+            embedded_sources = ()
+        sources = tuple(dict.fromkeys((*citations, *embedded_sources)))
         if len(markdown) < 80 or not sources:
             return None
         return GroundedPlan(markdown, sources)
     except (TypeError, ValueError, json.JSONDecodeError):
         return None
+
+
+def _extract_citations(interaction: Any) -> tuple[str, ...]:
+    """Read URL citations from Interactions API model-output annotations."""
+    urls: list[str] = []
+    for step in getattr(interaction, "steps", ()) or ():
+        content = getattr(step, "content", ()) or ()
+        for block in content:
+            for annotation in getattr(block, "annotations", ()) or ():
+                kind = getattr(annotation, "type", None)
+                url = getattr(annotation, "url", None)
+                if kind == "url_citation" and isinstance(url, str) and url.startswith(("https://", "http://")):
+                    urls.append(url)
+    return tuple(dict.fromkeys(urls))
 
 
 def _safe_profile(profile: dict[str, Any]) -> dict[str, Any]:
