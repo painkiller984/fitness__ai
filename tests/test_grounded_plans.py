@@ -5,6 +5,7 @@ import asyncio
 from app.providers.grounded_plans import (
     GeminiGroundedPlanSearch,
     _extract_citations,
+    normalize_plan_markdown,
     parse_generated_plan,
     parse_grounded_plan,
 )
@@ -40,6 +41,22 @@ def test_grounded_plan_accepts_plain_markdown_with_api_citations() -> None:
     assert result is not None
     assert result.sources == ("https://example.test/research",)
     assert "https://example.test" not in result.render("ru")
+
+
+def test_outer_markdown_fence_is_removed() -> None:
+    plan = "```markdown\n# Меню\n\n**Завтрак:** омлет\n```"
+
+    assert normalize_plan_markdown(plan) == "# Меню\n\n**Завтрак:** омлет"
+
+
+def test_generated_plan_removes_outer_markdown_fence() -> None:
+    raw = "```markdown\n# Персональное меню\n\n" + ("Подробный рацион. " * 8) + "\n```"
+
+    result = parse_generated_plan(raw)
+
+    assert result is not None
+    assert result.markdown.startswith("# Персональное меню")
+    assert "```" not in result.markdown
 
 
 def test_citations_are_extracted_from_interaction_annotations() -> None:

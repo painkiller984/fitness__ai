@@ -18,6 +18,16 @@ class GroundedPlan:
         return self.markdown
 
 
+def normalize_plan_markdown(markdown: str) -> str:
+    """Remove an outer Markdown fence without touching fences inside the plan."""
+    text = markdown.strip()
+    lines = text.splitlines()
+    if len(lines) >= 2 and lines[0].strip().casefold() in {"```", "```markdown", "```md"}:
+        if lines[-1].strip() == "```":
+            return "\n".join(lines[1:-1]).strip()
+    return text
+
+
 class GeminiGroundedPlanSearch:
     """Build plans with search grounding and a normal Gemini generation fallback."""
 
@@ -114,14 +124,14 @@ def parse_grounded_plan(
         start, end = raw.find("{"), raw.rfind("}")
         if start >= 0 and end > start:
             data = json.loads(raw[start : end + 1])
-            markdown = str(data.get("plan_markdown") or "").strip()
+            markdown = normalize_plan_markdown(str(data.get("plan_markdown") or ""))
             embedded_sources = tuple(
                 str(url).strip()
                 for url in data.get("sources", [])
                 if str(url).startswith(("https://", "http://"))
             )
         else:
-            markdown = raw.strip()
+            markdown = normalize_plan_markdown(raw)
             embedded_sources = ()
         sources = tuple(dict.fromkeys((*citations, *embedded_sources)))
         if len(markdown) < 80 or not sources:
@@ -137,9 +147,9 @@ def parse_generated_plan(raw: str) -> GroundedPlan | None:
         start, end = raw.find("{"), raw.rfind("}")
         if start >= 0 and end > start:
             data = json.loads(raw[start : end + 1])
-            markdown = str(data.get("plan_markdown") or "").strip()
+            markdown = normalize_plan_markdown(str(data.get("plan_markdown") or ""))
         else:
-            markdown = raw.strip()
+            markdown = normalize_plan_markdown(raw)
         if len(markdown) < 80:
             return None
         return GroundedPlan(markdown, ())

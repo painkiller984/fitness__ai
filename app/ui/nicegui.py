@@ -67,10 +67,11 @@ def configure_pages(settings: Settings) -> None:
               .composer { background: #171c23; border: 1px solid #353d48; border-radius: 18px; }
               .composer .q-field__control, .composer textarea { background: transparent !important; color: #fff !important; }
               .composer textarea::placeholder { color: #9ca7b5 !important; opacity: 1; }
-              .assistant-bubble, .user-bubble { display: inline-block; height: auto !important; min-height: 0 !important; background: #20262e; color: #fff; border: 1px solid #353d48; border-radius: 16px; padding: 12px 15px; max-width: min(760px, 90%); animation: message-in .22s ease-out; }
+              .assistant-bubble, .user-bubble { display: inline-block; height: auto !important; min-height: 0 !important; min-width: 0; background: #20262e; color: #fff; border: 1px solid #353d48; border-radius: 16px; padding: 12px 15px; max-width: min(760px, 90%); overflow-wrap: anywhere; animation: message-in .22s ease-out; }
               .user-bubble { background: #2a303a; }
               .assistant-bubble .q-markdown, .user-bubble .q-markdown { margin: 0 !important; padding: 0 !important; min-height: 0 !important; }
               .assistant-bubble p, .user-bubble p, .assistant-bubble .q-markdown p, .user-bubble .q-markdown p { color: #fff !important; margin: 0 !important; padding: 0 !important; }
+              .assistant-bubble pre, .user-bubble pre { max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
               .typing { color: #b8c2d0; font-size: .9rem; animation: pulse 1.1s ease-in-out infinite; }
               .prompt-chip { background: rgba(116, 126, 141, .24) !important; border: 1px solid rgba(180, 191, 207, .25); border-radius: 13px; color: #eef2f7 !important; }
               .prompt-chip .q-btn__content { color: #eef2f7 !important; }
@@ -287,7 +288,12 @@ def configure_pages(settings: Settings) -> None:
                     return
                 if normalized in show_commands:
                     typing.delete()
-                    add_bubble(format_profile_data(state["profile"], language))
+                    profile = public_profile_context(state["profile"])
+                    if profile.get("name"):
+                        add_bubble(format_profile_data(state["profile"], language))
+                    else:
+                        restart_stage = current_onboarding_stage(None, None)
+                        add_bubble(onboarding_reply(restart_stage, language))
                     return
                 known_profile = {
                     **public_profile_context(state["profile"]),
