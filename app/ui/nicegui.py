@@ -262,10 +262,12 @@ def configure_pages(settings: Settings) -> None:
                     state["pending_facts"] = {}
                     state["active_workflow"] = None
                     typing.delete()
+                    restart_stage = current_onboarding_stage(None, None)
+                    restart_greeting = onboarding_reply(restart_stage, language) if restart_stage else ""
                     add_bubble(
-                        "Your data has been cleared and queued for permanent deletion. You can start again by telling me about yourself."
+                        f"Your data has been cleared and queued for permanent deletion.\n\n{restart_greeting}"
                         if language == "en"
-                        else "Ваши данные очищены и поставлены на окончательное удаление. Можно начать заново: просто расскажите о себе."
+                        else f"Ваши данные очищены и поставлены на окончательное удаление.\n\n{restart_greeting}"
                     )
                     return
                 if normalized in delete_commands:
@@ -275,10 +277,12 @@ def configure_pages(settings: Settings) -> None:
                     state["pending_facts"] = {}
                     state["active_workflow"] = None
                     typing.delete()
+                    restart_stage = current_onboarding_stage(None, None)
+                    restart_greeting = onboarding_reply(restart_stage, language) if restart_stage else ""
                     add_bubble(
-                        "Your local profile has been deleted. You can start again by telling me about yourself."
+                        f"Your local profile has been deleted.\n\n{restart_greeting}"
                         if language == "en"
-                        else "Локальный профиль удалён. При желании можно начать заново: просто расскажите о себе."
+                        else f"Локальный профиль удалён.\n\n{restart_greeting}"
                     )
                     return
                 if normalized in show_commands:
