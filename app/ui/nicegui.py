@@ -373,7 +373,16 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 elif state["active_workflow"] == "workout_plan" and onboarding_stage is None:
-                    reply = build_workout_program(workflow_profile, language)
+                    grounded_workout = (
+                        await provider.plan_search.workout(workflow_profile, language)
+                        if provider.plan_search
+                        else None
+                    )
+                    reply = (
+                        grounded_workout.render(language)
+                        if grounded_workout
+                        else build_workout_program(workflow_profile, language)
+                    )
                     state["active_workflow"] = None
                     state["workout_setup"] = None
                     state["memory"].add("user", message)
@@ -402,7 +411,16 @@ def configure_pages(settings: Settings) -> None:
                             else:
                                 reply = "Не удалось надёжно найти КБЖУ этого продукта. Пришли фото или данные с упаковки — я учту их в расчёте."
                         else:
-                            reply = build_daily_menu(targets, profile_context, language=language)
+                            grounded_menu = (
+                                await provider.plan_search.menu(profile_context, targets, language)
+                                if provider.plan_search
+                                else None
+                            )
+                            reply = (
+                                grounded_menu.render(language)
+                                if grounded_menu
+                                else build_daily_menu(targets, profile_context, language=language)
+                            )
                         state["active_workflow"] = None
                         state["memory"].add("user", message)
                         state["memory"].add("assistant", reply)

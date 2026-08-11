@@ -26,6 +26,7 @@ def test_gemini_uses_configured_model_without_network_call() -> None:
     )
 
     assert bundle.label == "gemini:gemini-test"
+    assert bundle.plan_search is not None
 
 
 def test_ollama_does_not_require_an_api_key() -> None:

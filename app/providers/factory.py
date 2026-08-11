@@ -18,6 +18,7 @@ from app.providers.conversation import (
 )
 from app.providers.gemini import GeminiGenerator
 from app.providers.food_search import GeminiFoodSearch
+from app.providers.grounded_plans import GeminiGroundedPlanSearch
 from app.providers.openai_compatible import OpenAICompatibleGenerator
 
 
@@ -27,21 +28,23 @@ class ProviderBundle:
     judge: PlanJudge
     conversation: ConversationResponder
     food_search: GeminiFoodSearch | None
+    plan_search: GeminiGroundedPlanSearch | None
     label: str
 
 
 def create_provider_bundle(settings: Settings) -> ProviderBundle:
     provider = settings.ai_provider
     if provider == "deterministic":
-        return ProviderBundle(DeterministicGenerator(), DeterministicPlanJudge(), DeterministicConversationResponder(), None, "deterministic")
+        return ProviderBundle(DeterministicGenerator(), DeterministicPlanJudge(), DeterministicConversationResponder(), None, None, "deterministic")
     if provider == "gemini":
         if not settings.ai_api_key:
-            return ProviderBundle(DeterministicGenerator(), DeterministicPlanJudge(), DeterministicConversationResponder(), None, "deterministic")
+            return ProviderBundle(DeterministicGenerator(), DeterministicPlanJudge(), DeterministicConversationResponder(), None, None, "deterministic")
         return ProviderBundle(
             GeminiGenerator(settings.ai_api_key, settings.ai_model),
             GeminiPlanJudge(settings.ai_api_key, settings.ai_judge_model),
             GeminiConversationResponder(settings.ai_api_key, settings.ai_model),
             GeminiFoodSearch(settings.ai_api_key, settings.ai_model),
+            GeminiGroundedPlanSearch(settings.ai_api_key, settings.ai_model),
             f"gemini:{settings.ai_model}",
         )
 
@@ -49,11 +52,12 @@ def create_provider_bundle(settings: Settings) -> ProviderBundle:
     if not base_url:
         raise ValueError(f"AI_BASE_URL is required for provider '{provider}'.")
     if provider != "ollama" and not settings.ai_api_key:
-        return ProviderBundle(DeterministicGenerator(), DeterministicPlanJudge(), DeterministicConversationResponder(), None, "deterministic")
+        return ProviderBundle(DeterministicGenerator(), DeterministicPlanJudge(), DeterministicConversationResponder(), None, None, "deterministic")
     return ProviderBundle(
         OpenAICompatibleGenerator(base_url, settings.ai_api_key, settings.ai_model),
         OpenAICompatiblePlanJudge(base_url, settings.ai_api_key, settings.ai_judge_model),
         OpenAICompatibleConversationResponder(base_url, settings.ai_api_key, settings.ai_model),
+        None,
         None,
         f"{provider}:{settings.ai_model}",
     )
