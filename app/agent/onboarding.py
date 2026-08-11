@@ -132,7 +132,10 @@ def onboarding_reply(stage: OnboardingStage, language: str) -> str:
 
 def _onboarding_reply_ru(stage: OnboardingStage) -> str:
     questions = {
-        "name": "Понял. Перед персональными рекомендациями назови, пожалуйста, своё имя.",
+        "name": (
+            "Привет! Я Forma — твой фитнес-тренер и консультант по питанию. "
+            "Помогу с тренировками, рационом и расчётом калорий. Как тебя зовут?"
+        ),
         "body": "Чтобы продолжить, напиши недостающие данные одной фразой: возраст, пол, рост и текущий вес.",
         "goal_activity": "Уточни, пожалуйста, цель и обычный уровень активности.",
         "goal": "Уточни цель: похудение, набор мышечной массы, поддержание формы или улучшение самочувствия.",
@@ -148,7 +151,10 @@ def _onboarding_reply_ru(stage: OnboardingStage) -> str:
 
 def _onboarding_reply_en(stage: OnboardingStage) -> str:
     questions = {
-        "name": "Before personal recommendations, please tell me your first name.",
+        "name": (
+            "Hi! I’m Forma, your fitness coach and nutrition assistant. "
+            "I can help with training, nutrition, and calorie targets. What’s your name?"
+        ),
         "body": "To continue, send the missing details in one sentence: age, sex, height, and current weight.",
         "goal_activity": "Please clarify your goal and usual activity level.",
         "goal": "Please clarify your goal: weight loss, muscle gain, maintenance, or wellbeing.",

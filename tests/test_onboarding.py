@@ -44,6 +44,15 @@ def test_onboarding_context_uses_requested_language() -> None:
     assert "first name" in onboarding_context(stage, "en")["mandatory_instruction"]
 
 
+def test_first_reply_introduces_forma_and_asks_name() -> None:
+    stage = current_onboarding_stage({})
+
+    assert stage is not None
+    reply = onboarding_reply(stage, "ru")
+    assert "Я Forma" in reply
+    assert "Как тебя зовут?" in reply
+
+
 def test_workout_onboarding_reply_mentions_experience_and_health() -> None:
     stage = current_onboarding_stage(
         {
