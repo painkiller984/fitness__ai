@@ -90,6 +90,7 @@ def configure_pages(settings: Settings) -> None:
             "profile": None,
             "pending_facts": {},
             "active_workflow": None,
+            "workout_setup": None,
             "token": None,
             "user_id": None,
         }
@@ -226,8 +227,15 @@ def configure_pages(settings: Settings) -> None:
                 normalized = message.casefold().strip()
                 language = response_language(message)
                 intent = route_intent(message)
-                if intent == "workout_plan":
+                if intent == "workout_plan" and state["active_workflow"] != "workout_plan":
                     state["active_workflow"] = "workout_plan"
+                    # Reconfirm the safety-critical training context for each new program.
+                    # Older profile values may describe a previous routine.
+                    state["workout_setup"] = {
+                        "training_place": None,
+                        "training_experience": None,
+                        "health_screened": False,
+                    }
                 elif intent in {"nutrition_targets", "meal_plan"}:
                     state["active_workflow"] = intent
                 elif intent == "meal_adjustment":
@@ -253,6 +261,7 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"] = ConversationMemory()
                     state["pending_facts"] = {}
                     state["active_workflow"] = None
+                    state["workout_setup"] = None
                     typing.delete()
                     add_bubble(
                         "Your data has been cleared and queued for permanent deletion. You can start again by telling me about yourself."
@@ -266,6 +275,7 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"] = ConversationMemory()
                     state["pending_facts"] = {}
                     state["active_workflow"] = None
+                    state["workout_setup"] = None
                     typing.delete()
                     add_bubble(
                         "Your local profile has been deleted. You can start again by telling me about yourself."
@@ -281,9 +291,23 @@ def configure_pages(settings: Settings) -> None:
                     **public_profile_context(state["profile"]),
                     **state["pending_facts"],
                 }
-                expected_stage = current_onboarding_stage(known_profile, state["active_workflow"])
+                workout_setup = state["workout_setup"]
+                onboarding_profile = (
+                    {**known_profile, **workout_setup}
+                    if state["active_workflow"] == "workout_plan" and workout_setup is not None
+                    else known_profile
+                )
+                expected_stage = current_onboarding_stage(onboarding_profile, state["active_workflow"])
                 expected_fields = set(expected_stage.missing_fields) if expected_stage else set()
                 facts = extract_profile_facts(message, expected_fields)
+                if state["active_workflow"] == "workout_plan" and workout_setup is not None:
+                    workout_setup.update(
+                        {
+                            key: facts[key]
+                            for key in ("training_place", "training_experience", "health_screened")
+                            if key in facts
+                        }
+                    )
                 preferences = extract_durable_dietary_preferences(message)
                 if preferences:
                     saved_preferences = list(known_profile.get("dietary_preferences") or [])
@@ -319,9 +343,14 @@ def configure_pages(settings: Settings) -> None:
                         **state["pending_facts"],
                     }.items()
                 }
-                onboarding_stage = current_onboarding_stage(profile_context, state["active_workflow"])
+                workflow_profile = (
+                    {**profile_context, **workout_setup}
+                    if state["active_workflow"] == "workout_plan" and workout_setup is not None
+                    else profile_context
+                )
+                onboarding_stage = current_onboarding_stage(workflow_profile, state["active_workflow"])
                 if onboarding_stage:
-                    profile_context["_onboarding"] = onboarding_context(onboarding_stage, language)
+                    workflow_profile["_onboarding"] = onboarding_context(onboarding_stage, language)
                 urgent_reply = urgent_message_if_needed(message)
                 complete_profile = build_complete_profile(profile_context)
                 if complete_profile:
@@ -340,8 +369,9 @@ def configure_pages(settings: Settings) -> None:
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 elif state["active_workflow"] == "workout_plan" and onboarding_stage is None:
-                    reply = build_workout_program(profile_context, language)
+                    reply = build_workout_program(workflow_profile, language)
                     state["active_workflow"] = None
+                    state["workout_setup"] = None
                     state["memory"].add("user", message)
                     state["memory"].add("assistant", reply)
                 else:
@@ -377,7 +407,7 @@ def configure_pages(settings: Settings) -> None:
                         state["active_workflow"] = None
                     else:
                         reply = await provider.conversation.respond(
-                            message, state["memory"].recent(), profile_context
+                            message, state["memory"].recent(), workflow_profile
                         )
                         state["memory"].add("user", message)
                         state["memory"].add("assistant", reply)
